@@ -12,9 +12,14 @@
   --accent: #d94235;
   --action: #c2382f;
   --accent-contrast: #fff8ed;
-  --sunshine: #f0b94b;
-  --sea: #357c91;
   --focus: #a72c24;
+  --map: #c8ddda;
+  --map-border: #9fbab4;
+  --map-land-top: #f6edda;
+  --map-land-bottom: #d7c8aa;
+  --map-shadow: #31584f;
+  --map-contour: #7ba69e;
+  --route-base: #244c40;
   --font-app-sans: "Be Vietnam Pro";
   --font-app-mono: "JetBrains Mono Variable";
 }
@@ -30,9 +35,9 @@
   --color-accent: var(--accent);
   --color-action: var(--action);
   --color-accent-contrast: var(--accent-contrast);
-  --color-sunshine: var(--sunshine);
-  --color-sea: var(--sea);
   --color-focus: var(--focus);
+  --color-map: var(--map);
+  --color-map-border: var(--map-border);
   --font-sans: var(--font-app-sans);
   --font-mono: var(--font-app-mono);
   --radius-control: 0.75rem;
@@ -51,9 +56,14 @@
     --accent: #ef6b60;
     --action: #ef6b60;
     --accent-contrast: #1b1110;
-    --sunshine: #f2c566;
-    --sea: #70aabd;
     --focus: #ff8b81;
+    --map: #162c2c;
+    --map-border: #31504b;
+    --map-land-top: #395448;
+    --map-land-bottom: #263e35;
+    --map-shadow: #07100d;
+    --map-contour: #376963;
+    --route-base: #d9cba9;
   }
 }
 
@@ -69,10 +79,21 @@ html {
 body {
   min-height: 100dvh;
   margin: 0;
-  background: var(--background);
+  background:
+    radial-gradient(circle at 82% 8%, color-mix(in srgb, var(--accent) 7%, transparent), transparent 28rem),
+    var(--background);
   color: var(--foreground);
   font-family: var(--font-app-sans), system-ui, sans-serif;
   text-rendering: optimizeLegibility;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
 }
 
 ::selection {
@@ -82,6 +103,322 @@ body {
 :focus-visible {
   outline: 3px solid var(--focus);
   outline-offset: 3px;
+}
+
+.map-stage {
+  isolation: isolate;
+  box-shadow: 0 28px 80px color-mix(in srgb, var(--forest) 13%, transparent);
+}
+
+.map-stage::before {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background:
+    radial-gradient(circle at 22% 18%, rgb(255 255 255 / 0.27), transparent 25%),
+    linear-gradient(145deg, transparent 54%, color-mix(in srgb, var(--map-contour) 17%, transparent));
+  content: "";
+  pointer-events: none;
+}
+
+.map-contours path {
+  fill: none;
+  stroke: var(--map-contour);
+  stroke-linecap: round;
+  stroke-width: 1.4;
+  opacity: 0.42;
+}
+
+.vietnam-land {
+  stroke: color-mix(in srgb, var(--forest) 67%, var(--surface));
+  stroke-linejoin: round;
+  stroke-width: 2;
+}
+
+.map-islands circle {
+  fill: color-mix(in srgb, var(--map-land-bottom) 88%, var(--forest));
+  stroke: color-mix(in srgb, var(--forest) 58%, var(--surface));
+  stroke-width: 1;
+}
+
+.journey-route-base,
+.journey-route-traveled {
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.journey-route-base {
+  stroke: var(--route-base);
+  stroke-width: 9;
+  opacity: 0.3;
+}
+
+.journey-route-traveled {
+  stroke: var(--accent);
+  stroke-width: 5;
+}
+
+.stop-leader {
+  stroke: color-mix(in srgb, var(--foreground) 34%, transparent);
+  stroke-width: 1.25;
+}
+
+.stop-label {
+  fill: var(--foreground);
+  font-family: var(--font-app-sans), sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  paint-order: stroke;
+  stroke: var(--map);
+  stroke-linejoin: round;
+  stroke-width: 4px;
+}
+
+.stop-marker-ring {
+  fill: var(--surface);
+  stroke: color-mix(in srgb, var(--foreground) 45%, transparent);
+  stroke-width: 2;
+}
+
+.stop-marker-core {
+  fill: var(--muted);
+}
+
+[data-state="completed"] .stop-marker-ring {
+  fill: var(--forest);
+  stroke: var(--surface);
+}
+
+[data-state="completed"] .stop-marker-core,
+[data-state="current"] .stop-marker-core {
+  fill: var(--surface);
+}
+
+[data-state="current"] .stop-marker-ring {
+  fill: var(--accent);
+  stroke: var(--surface);
+  stroke-width: 3;
+}
+
+[data-state="upcoming"] .stop-label,
+[data-state="upcoming"] .stop-leader {
+  opacity: 0.68;
+}
+
+.journey-vehicle {
+  transform-box: fill-box;
+  transform-origin: center;
+  will-change: transform;
+}
+
+.vehicle-shadow {
+  fill: color-mix(in srgb, var(--forest) 34%, transparent);
+}
+
+.vehicle-body,
+.vehicle-cabin {
+  fill: var(--accent);
+  stroke: var(--surface);
+  stroke-width: 1.5;
+}
+
+.vehicle-window {
+  fill: var(--map);
+  stroke: var(--surface);
+  stroke-width: 1;
+}
+
+.vehicle-wheel {
+  fill: var(--foreground);
+  stroke: var(--surface);
+  stroke-width: 1.5;
+}
+
+.vehicle-hub,
+.vehicle-light {
+  fill: var(--surface);
+}
+
+.map-legend,
+.coordinate-readout {
+  position: absolute;
+  bottom: 1rem;
+  display: flex;
+  align-items: center;
+  border: 1px solid color-mix(in srgb, var(--forest) 22%, transparent);
+  border-radius: var(--radius-control);
+  background: color-mix(in srgb, var(--surface) 90%, transparent);
+  color: var(--foreground);
+  backdrop-filter: blur(12px);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.24);
+}
+
+.map-legend {
+  left: 1rem;
+  gap: 0.55rem;
+  padding: 0.55rem 0.7rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.legend-line {
+  width: 1.8rem;
+  height: 3px;
+  border-radius: 99px;
+  background: var(--accent);
+}
+
+.coordinate-readout {
+  right: 1rem;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.15rem;
+  padding: 0.55rem 0.7rem;
+  font-family: var(--font-app-mono), monospace;
+  font-size: 0.62rem;
+  line-height: 1.35;
+}
+
+.coordinate-readout span {
+  color: var(--accent);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.control-panel {
+  box-shadow: 0 24px 70px color-mix(in srgb, var(--forest) 11%, transparent);
+}
+
+.journey-slider {
+  height: 2rem;
+  margin-inline: 0;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.journey-slider::-webkit-slider-runnable-track {
+  height: 5px;
+  border-radius: 99px;
+  background: color-mix(in srgb, var(--foreground) 18%, transparent);
+}
+
+.journey-slider::-webkit-slider-thumb {
+  width: 1.35rem;
+  height: 1.35rem;
+  margin-top: -0.52rem;
+  appearance: none;
+  border: 3px solid var(--surface);
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--forest) 32%, transparent);
+}
+
+.journey-slider::-moz-range-track {
+  height: 5px;
+  border-radius: 99px;
+  background: color-mix(in srgb, var(--foreground) 18%, transparent);
+}
+
+.journey-slider::-moz-range-thumb {
+  width: 1rem;
+  height: 1rem;
+  border: 3px solid var(--surface);
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--forest) 32%, transparent);
+}
+
+.route-board {
+  list-style: none;
+}
+
+.route-board-stop {
+  min-height: 2.25rem;
+  color: var(--muted);
+}
+
+.route-stop-number {
+  display: grid;
+  width: 1.7rem;
+  height: 1.7rem;
+  place-items: center;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  background: var(--surface-strong);
+  color: var(--muted);
+}
+
+.route-board-stop[data-state="completed"],
+.route-board-stop[data-state="current"] {
+  color: var(--foreground);
+}
+
+.route-board-stop[data-state="completed"] .route-stop-number {
+  border-color: var(--forest);
+  background: var(--forest);
+  color: var(--surface);
+}
+
+.route-board-stop[data-state="current"] .route-stop-number {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--accent-contrast);
+}
+
+.map-stage:fullscreen {
+  width: 100vw;
+  height: 100dvh;
+  min-height: 100dvh;
+  border: 0;
+  border-radius: 0;
+  background: var(--map);
+}
+
+@media (max-width: 1023px) {
+  .map-stage {
+    height: min(60dvh, 35rem);
+    min-height: 27rem;
+  }
+}
+
+@media (max-width: 520px) {
+  .map-stage {
+    height: 28rem;
+    min-height: 28rem;
+  }
+
+  .coordinate-readout {
+    display: none;
+  }
+
+  .map-legend {
+    bottom: 0.75rem;
+    left: 0.75rem;
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .map-legend,
+  .coordinate-readout {
+    background: var(--surface);
+    backdrop-filter: none;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  [data-state="current"] .stop-marker-ring {
+    animation: marker-breathe 1.8s ease-in-out infinite;
+  }
+}
+
+@keyframes marker-breathe {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.13);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
