@@ -5,6 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "map:fetch": "node scripts/fetch-vietnam-boundary.mjs",
+    "map:generate": "node scripts/generate-map-geometry.mjs",
+    "prebuild": "npm run map:generate",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "lint": "eslint .",
@@ -33,6 +36,7 @@
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.2.0",
     "@vitest/coverage-v8": "^3.2.7",
+    "d3-geo": "^3.1.1",
     "eslint": "^9.39.5",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.24",

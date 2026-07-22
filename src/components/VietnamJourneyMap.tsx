@@ -1,4 +1,7 @@
 import {
+  type KeyboardEvent as ReactKeyboardEvent,
+  type PointerEvent as ReactPointerEvent,
+  type WheelEvent as ReactWheelEvent,
   useCallback,
   useEffect,
   useMemo,
@@ -6,11 +9,21 @@ import {
   useState,
 } from "react";
 
-import { centralRoute } from "../data/centralRoute";
+import { centralRoute, vietnamMapGeometry } from "../data/centralRoute";
 import {
   getPointAtProgress,
   getProgressAtPointIndex,
 } from "../lib/routeGeometry";
+import {
+  createInitialViewport,
+  MAX_MAP_ZOOM,
+  MIN_MAP_ZOOM,
+  panViewport,
+  serializeViewport,
+  zoomViewport,
+  type MapPoint,
+  type MapViewport,
+} from "../lib/mapViewport";
 
 const PLAYBACK_DURATION_MS = 8_000;
 
@@ -22,6 +35,12 @@ const stopProgressValues = centralRoute.stops.map((stop) =>
   getProgressAtPointIndex(centralRoute.points, stop.pointIndex),
 );
 
+const initialVehicle = getPointAtProgress(centralRoute.points, 0);
+const mapViewBox = `0 0 ${vietnamMapGeometry.viewBox.width} ${vietnamMapGeometry.viewBox.height}`;
+const mapSize = vietnamMapGeometry.viewBox;
+const initialViewport = createInitialViewport(mapSize);
+const ZOOM_STEP = 1.5;
+
 function getActiveStopIndex(progress: number) {
   let activeIndex = 0;
   stopProgressValues.forEach((stopProgress, index) => {
@@ -32,12 +51,24 @@ function getActiveStopIndex(progress: number) {
 
 export function VietnamJourneyMap() {
   const mapStageRef = useRef<HTMLElement>(null);
+  const mapSvgRef = useRef<SVGSVGElement>(null);
   const vehicleRef = useRef<SVGGElement>(null);
   const traveledRouteRef = useRef<SVGPolylineElement>(null);
   const progressInputRef = useRef<HTMLInputElement>(null);
   const progressNumberRef = useRef<HTMLOutputElement>(null);
   const coordinateOutputRef = useRef<HTMLOutputElement>(null);
+  const zoomOutputRef = useRef<HTMLOutputElement>(null);
+  const zoomInRef = useRef<HTMLButtonElement>(null);
+  const zoomOutRef = useRef<HTMLButtonElement>(null);
   const progressRef = useRef(0);
+  const viewportRef = useRef<MapViewport>({ ...initialViewport });
+  const dragRef = useRef<{
+    pointerId: number;
+    clientX: number;
+    clientY: number;
+    scale: number;
+    viewport: MapViewport;
+  } | null>(null);
   const playingRef = useRef(false);
   const manualTimeRef = useRef(false);
   const completeRef = useRef(false);
@@ -49,6 +80,50 @@ export function VietnamJourneyMap() {
   const setPlaying = useCallback((nextPlaying: boolean) => {
     playingRef.current = nextPlaying;
     setIsPlaying(nextPlaying);
+  }, []);
+
+  const updateMapViewport = useCallback((nextViewport: MapViewport) => {
+    viewportRef.current = nextViewport;
+    const zoomed = nextViewport.zoom > MIN_MAP_ZOOM + 0.001;
+
+    mapSvgRef.current?.setAttribute("viewBox", serializeViewport(nextViewport));
+    mapSvgRef.current?.setAttribute("data-zoomed", String(zoomed));
+
+    if (zoomOutputRef.current) {
+      const zoomLabel = Number(nextViewport.zoom.toFixed(2));
+      zoomOutputRef.current.textContent = `${zoomLabel}×`;
+    }
+    if (zoomInRef.current) {
+      zoomInRef.current.disabled = nextViewport.zoom >= MAX_MAP_ZOOM - 0.001;
+    }
+    if (zoomOutRef.current) {
+      zoomOutRef.current.disabled = !zoomed;
+    }
+  }, []);
+
+  const setMapZoom = useCallback(
+    (zoom: number, focalPoint?: MapPoint) => {
+      updateMapViewport(
+        zoomViewport(mapSize, viewportRef.current, zoom, focalPoint),
+      );
+    },
+    [updateMapViewport],
+  );
+
+  const resetMapView = useCallback(() => {
+    updateMapViewport({ ...initialViewport });
+  }, [updateMapViewport]);
+
+  const getMapPoint = useCallback((clientX: number, clientY: number) => {
+    const svg = mapSvgRef.current;
+    const matrix = svg?.getScreenCTM();
+    if (!svg || !matrix) return undefined;
+
+    const point = svg.createSVGPoint();
+    point.x = clientX;
+    point.y = clientY;
+    const transformed = point.matrixTransform(matrix.inverse());
+    return { x: transformed.x, y: transformed.y };
   }, []);
 
   const updateVisual = useCallback((nextProgress: number) => {
@@ -100,7 +175,8 @@ export function VietnamJourneyMap() {
 
   useEffect(() => {
     updateVisual(0);
-  }, [updateVisual]);
+    updateMapViewport({ ...initialViewport });
+  }, [updateMapViewport, updateVisual]);
 
   useEffect(() => {
     if (!isPlaying) return;
@@ -130,7 +206,15 @@ export function VietnamJourneyMap() {
 
       return JSON.stringify({
         mode: playingRef.current ? "playing" : progress >= 1 ? "completed" : "paused",
-        coordinateSystem: "SVG viewBox 0 0 480 720; origin top-left; x right; y down",
+        coordinateSystem: `Projected GeoJSON in SVG viewBox ${mapViewBox}; origin top-left; x right; y down`,
+        projection: vietnamMapGeometry.projection.type,
+        mapViewport: {
+          zoom: Number(viewportRef.current.zoom.toFixed(3)),
+          x: Number(viewportRef.current.x.toFixed(2)),
+          y: Number(viewportRef.current.y.toFixed(2)),
+          width: Number(viewportRef.current.width.toFixed(2)),
+          height: Number(viewportRef.current.height.toFixed(2)),
+        },
         route: centralRoute.name,
         progress: Number(progress.toFixed(4)),
         vehicle: {
@@ -142,6 +226,8 @@ export function VietnamJourneyMap() {
         nextStop: centralRoute.stops[stopIndex + 1]?.name ?? null,
         stops: centralRoute.stops.map((stop, index) => ({
           name: stop.name,
+          longitude: stop.coordinates[0],
+          latitude: stop.coordinates[1],
           progress: Number(stopProgressValues[index].toFixed(4)),
           state:
             progress >= 1 || index < stopIndex
@@ -166,13 +252,17 @@ export function VietnamJourneyMap() {
     window.render_game_to_text = renderGameToText;
     window.setJourneyProgress = setJourneyProgress;
     window.advanceTime = advanceTime;
+    window.setMapZoom = setMapZoom;
+    window.resetMapView = resetMapView;
 
     return () => {
       delete window.render_game_to_text;
       delete window.setJourneyProgress;
       delete window.advanceTime;
+      delete window.setMapZoom;
+      delete window.resetMapView;
     };
-  }, [advanceProgress, setPlaying, updateVisual]);
+  }, [advanceProgress, resetMapView, setMapZoom, setPlaying, updateVisual]);
 
   useEffect(() => {
     const toggleFullscreen = (event: KeyboardEvent) => {
@@ -215,6 +305,87 @@ export function VietnamJourneyMap() {
     updateVisual(0);
   };
 
+  const handleMapWheel = (event: ReactWheelEvent<SVGSVGElement>) => {
+    if (!event.ctrlKey && viewportRef.current.zoom <= MIN_MAP_ZOOM) return;
+
+    event.preventDefault();
+    const focalPoint = getMapPoint(event.clientX, event.clientY);
+    const zoomMultiplier = Math.exp(-event.deltaY * 0.002);
+    setMapZoom(viewportRef.current.zoom * zoomMultiplier, focalPoint);
+  };
+
+  const handleMapPointerDown = (event: ReactPointerEvent<SVGSVGElement>) => {
+    if (viewportRef.current.zoom <= MIN_MAP_ZOOM) return;
+
+    const rect = event.currentTarget.getBoundingClientRect();
+    const scale = Math.min(
+      rect.width / viewportRef.current.width,
+      rect.height / viewportRef.current.height,
+    );
+    dragRef.current = {
+      pointerId: event.pointerId,
+      clientX: event.clientX,
+      clientY: event.clientY,
+      scale,
+      viewport: { ...viewportRef.current },
+    };
+    event.currentTarget.setPointerCapture(event.pointerId);
+    event.currentTarget.setAttribute("data-dragging", "true");
+  };
+
+  const handleMapPointerMove = (event: ReactPointerEvent<SVGSVGElement>) => {
+    const drag = dragRef.current;
+    if (!drag || drag.pointerId !== event.pointerId) return;
+
+    updateMapViewport(
+      panViewport(mapSize, drag.viewport, {
+        x: -(event.clientX - drag.clientX) / drag.scale,
+        y: -(event.clientY - drag.clientY) / drag.scale,
+      }),
+    );
+  };
+
+  const endMapDrag = (event: ReactPointerEvent<SVGSVGElement>) => {
+    if (dragRef.current?.pointerId !== event.pointerId) return;
+    dragRef.current = null;
+    event.currentTarget.removeAttribute("data-dragging");
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+  };
+
+  const handleMapKeyDown = (event: ReactKeyboardEvent<SVGSVGElement>) => {
+    const key = event.key;
+    if (["+", "=", "-", "0", "ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(key)) {
+      event.preventDefault();
+    } else {
+      return;
+    }
+
+    if (key === "+" || key === "=") {
+      setMapZoom(viewportRef.current.zoom * ZOOM_STEP);
+      return;
+    }
+    if (key === "-") {
+      setMapZoom(viewportRef.current.zoom / ZOOM_STEP);
+      return;
+    }
+    if (key === "0") {
+      resetMapView();
+      return;
+    }
+
+    const viewport = viewportRef.current;
+    const xStep = viewport.width * 0.1;
+    const yStep = viewport.height * 0.1;
+    updateMapViewport(
+      panViewport(mapSize, viewport, {
+        x: key === "ArrowLeft" ? -xStep : key === "ArrowRight" ? xStep : 0,
+        y: key === "ArrowUp" ? -yStep : key === "ArrowDown" ? yStep : 0,
+      }),
+    );
+  };
+
   const currentStop = centralRoute.stops[activeStopIndex];
   const nextStop = centralRoute.stops[activeStopIndex + 1];
   const markerStates = useMemo(
@@ -249,16 +420,32 @@ export function VietnamJourneyMap() {
           className="map-stage relative m-0 min-h-[31rem] overflow-hidden rounded-[var(--radius-panel)] border border-map-border bg-map lg:min-h-[calc(100dvh-8rem)]"
         >
           <svg
+            ref={mapSvgRef}
             id="journey-map-svg"
             className="absolute inset-0 h-full w-full"
-            viewBox="0 0 480 720"
+            viewBox={mapViewBox}
+            data-zoomed="false"
             role="img"
             aria-labelledby="map-title map-description"
+            aria-describedby="map-navigation-help"
             preserveAspectRatio="xMidYMid meet"
+            tabIndex={0}
+            onWheel={handleMapWheel}
+            onDoubleClick={(event) => {
+              setMapZoom(
+                viewportRef.current.zoom * ZOOM_STEP,
+                getMapPoint(event.clientX, event.clientY),
+              );
+            }}
+            onPointerDown={handleMapPointerDown}
+            onPointerMove={handleMapPointerMove}
+            onPointerUp={endMapDrag}
+            onPointerCancel={endMapDrag}
+            onKeyDown={handleMapKeyDown}
           >
             <title id="map-title">Bản đồ tuyến miền Trung</title>
             <desc id="map-description">
-              Bản đồ Việt Nam cách điệu với sáu điểm từ Huế đến Nha Trang và một xe đang di chuyển theo tiến độ.
+              Đường biên Việt Nam từ dữ liệu Natural Earth được chiếu cùng sáu điểm tọa độ địa lý từ Huế đến Nha Trang và một xe đang di chuyển theo tiến độ.
             </desc>
 
             <defs>
@@ -282,14 +469,34 @@ export function VietnamJourneyMap() {
               className="vietnam-land"
               filter="url(#land-shadow)"
               fill="url(#land-wash)"
-              d="M194 48 C169 34 136 42 117 61 C93 84 100 108 126 126 C146 140 157 157 154 181 C151 205 164 226 180 242 C190 253 190 272 181 291 C171 310 170 331 178 351 C184 368 184 389 178 409 C173 432 181 456 197 480 C210 500 218 522 225 548 C231 572 247 590 270 607 C293 624 306 647 299 674 C292 699 266 708 238 697 C218 689 199 689 181 700 C155 716 125 705 112 681 C99 657 114 633 139 623 C158 616 169 599 166 575 C162 546 151 519 138 494 C124 467 119 438 126 409 C131 384 128 358 118 334 C109 311 114 288 129 269 C143 251 149 231 139 212 C126 190 117 171 119 151 C120 135 108 122 88 113 C64 102 57 77 70 56 C85 32 112 20 143 23 C163 25 181 34 194 48 Z"
+              d={vietnamMapGeometry.path}
             />
 
-            <g className="map-islands" aria-hidden="true">
-              <circle cx="324" cy="310" r="4" />
-              <circle cx="348" cy="332" r="2.5" />
-              <circle cx="337" cy="532" r="3" />
-              <circle cx="363" cy="557" r="2" />
+            <g className="archipelago-markers" aria-label="Vị trí địa lý của hai quần đảo">
+              {vietnamMapGeometry.archipelagos.map((place) => (
+                <g key={place.id} className="archipelago-marker">
+                  <circle
+                    className="archipelago-marker-ring"
+                    cx={place.point.x}
+                    cy={place.point.y}
+                    r="6"
+                  />
+                  <circle
+                    className="archipelago-marker-core"
+                    cx={place.point.x}
+                    cy={place.point.y}
+                    r="2"
+                  />
+                  <text
+                    className="archipelago-label"
+                    x={place.label.x}
+                    y={place.label.y}
+                    textAnchor={place.label.anchor}
+                  >
+                    {place.name}
+                  </text>
+                </g>
+              ))}
             </g>
 
             <polyline
@@ -323,8 +530,8 @@ export function VietnamJourneyMap() {
                     y2={stop.label.y - 4}
                   />
                   <g className="stop-marker" transform={`translate(${point.x} ${point.y})`}>
-                    <circle className="stop-marker-ring" r="10" />
-                    <circle className="stop-marker-core" r="3.75" />
+                    <circle className="stop-marker-ring" r="7.5" />
+                    <circle className="stop-marker-core" r="2.75" />
                   </g>
                   <text
                     className="stop-label"
@@ -341,7 +548,7 @@ export function VietnamJourneyMap() {
             <g
               ref={vehicleRef}
               className="journey-vehicle"
-              transform="translate(178 300) rotate(92)"
+              transform={`translate(${initialVehicle.x} ${initialVehicle.y}) rotate(${initialVehicle.angle})`}
               aria-hidden="true"
             >
               <ellipse className="vehicle-shadow" cx="0" cy="8" rx="22" ry="7" />
@@ -358,16 +565,60 @@ export function VietnamJourneyMap() {
             </g>
           </svg>
 
+          <div className="map-zoom-panel">
+            <div
+              className="map-zoom-controls"
+              role="group"
+              aria-label="Điều khiển thu phóng bản đồ"
+            >
+              <button
+                ref={zoomOutRef}
+                id="map-zoom-out"
+                type="button"
+                aria-label="Thu nhỏ bản đồ"
+                title="Thu nhỏ bản đồ"
+                disabled
+                onClick={() => setMapZoom(viewportRef.current.zoom / ZOOM_STEP)}
+              >
+                −
+              </button>
+              <button
+                id="map-zoom-reset"
+                type="button"
+                aria-label="Hiển thị toàn bộ Việt Nam"
+                title="Hiển thị toàn bộ Việt Nam"
+                onClick={resetMapView}
+              >
+                <output ref={zoomOutputRef} aria-live="polite">1×</output>
+              </button>
+              <button
+                ref={zoomInRef}
+                id="map-zoom-in"
+                type="button"
+                aria-label="Phóng to bản đồ"
+                title="Phóng to bản đồ"
+                onClick={() => setMapZoom(viewportRef.current.zoom * ZOOM_STEP)}
+              >
+                +
+              </button>
+            </div>
+            <span id="map-navigation-help" className="map-zoom-hint">
+              Phóng to rồi kéo để xem từng vùng
+            </span>
+          </div>
+
           <div className="map-legend" aria-hidden="true">
             <span className="legend-line" />
             <span>Tuyến miền Trung</span>
           </div>
           <div className="coordinate-readout">
             <span>PROGRESS</span>
-            <output ref={coordinateOutputRef}>x 178.0&nbsp; y 300.0&nbsp; góc 92°</output>
+            <output ref={coordinateOutputRef}>
+              x {initialVehicle.x.toFixed(1)}&nbsp; y {initialVehicle.y.toFixed(1)}&nbsp; góc {initialVehicle.angle.toFixed(0)}°
+            </output>
           </div>
           <figcaption className="sr-only">
-            Nhấn phím F để bật hoặc tắt chế độ toàn màn hình cho bản đồ.
+            Hình học bản đồ lấy từ Natural Earth 1:10m. Dùng các nút thu phóng, kéo khi đã phóng to, phím mũi tên để di chuyển và phím 0 để trở về toàn cảnh. Nhấn phím F để bật hoặc tắt chế độ toàn màn hình.
           </figcaption>
         </figure>
 

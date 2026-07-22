@@ -36,4 +36,23 @@ describe("central route map prototype", () => {
     expect(state.progress).toBe(0.5);
     expect(screen.getByText("50%")).toBeInTheDocument();
   });
+
+  it("zooms the map and restores the full Vietnam view", () => {
+    const { container } = render(<App />);
+    const map = container.querySelector("#journey-map-svg");
+
+    fireEvent.click(screen.getByRole("button", { name: "Phóng to bản đồ" }));
+    let state = JSON.parse(window.render_game_to_text!());
+
+    expect(state.mapViewport.zoom).toBe(1.5);
+    expect(map).toHaveAttribute("viewBox", "80 120 320 480");
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Hiển thị toàn bộ Việt Nam" }),
+    );
+    state = JSON.parse(window.render_game_to_text!());
+
+    expect(state.mapViewport.zoom).toBe(1);
+    expect(map).toHaveAttribute("viewBox", "0 0 480 720");
+  });
 });

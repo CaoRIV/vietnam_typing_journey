@@ -121,6 +121,91 @@ button {
   pointer-events: none;
 }
 
+#journey-map-svg {
+  touch-action: pan-y;
+}
+
+#journey-map-svg[data-zoomed="true"] {
+  cursor: grab;
+  touch-action: none;
+}
+
+#journey-map-svg[data-dragging="true"] {
+  cursor: grabbing;
+}
+
+.map-zoom-panel {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  display: grid;
+  justify-items: end;
+  gap: 0.45rem;
+}
+
+.map-zoom-controls {
+  display: grid;
+  grid-template-columns: 2.5rem minmax(3.75rem, auto) 2.5rem;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--forest) 24%, transparent);
+  border-radius: var(--radius-control);
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+  backdrop-filter: blur(12px);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.24),
+    0 8px 24px color-mix(in srgb, var(--forest) 12%, transparent);
+}
+
+.map-zoom-controls button {
+  min-height: 2.5rem;
+  border: 0;
+  border-right: 1px solid color-mix(in srgb, var(--forest) 18%, transparent);
+  background: transparent;
+  color: var(--foreground);
+  font-family: var(--font-app-mono), monospace;
+  font-size: 1.05rem;
+  font-weight: 750;
+  line-height: 1;
+  transition:
+    background-color 160ms ease,
+    color 160ms ease,
+    transform 160ms ease;
+}
+
+.map-zoom-controls button:last-child {
+  border-right: 0;
+}
+
+.map-zoom-controls button:hover:not(:disabled) {
+  background: var(--surface-strong);
+  color: var(--accent);
+}
+
+.map-zoom-controls button:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.map-zoom-controls button:disabled {
+  cursor: default;
+  opacity: 0.42;
+}
+
+.map-zoom-controls output {
+  font-size: 0.68rem;
+  letter-spacing: -0.02em;
+}
+
+.map-zoom-hint {
+  border: 1px solid color-mix(in srgb, var(--forest) 18%, transparent);
+  border-radius: 0.5rem;
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+  padding: 0.35rem 0.5rem;
+  color: var(--muted);
+  font-size: 0.62rem;
+  font-weight: 650;
+  backdrop-filter: blur(10px);
+}
+
 .map-contours path {
   fill: none;
   stroke: var(--map-contour);
@@ -132,13 +217,29 @@ button {
 .vietnam-land {
   stroke: color-mix(in srgb, var(--forest) 67%, var(--surface));
   stroke-linejoin: round;
-  stroke-width: 2;
+  stroke-width: 1.15;
 }
 
-.map-islands circle {
-  fill: color-mix(in srgb, var(--map-land-bottom) 88%, var(--forest));
-  stroke: color-mix(in srgb, var(--forest) 58%, var(--surface));
-  stroke-width: 1;
+.archipelago-marker-ring {
+  fill: color-mix(in srgb, var(--surface) 72%, transparent);
+  stroke: color-mix(in srgb, var(--forest) 62%, var(--surface));
+  stroke-width: 1.2;
+}
+
+.archipelago-marker-core {
+  fill: var(--forest);
+}
+
+.archipelago-label {
+  fill: color-mix(in srgb, var(--foreground) 78%, var(--map));
+  font-family: var(--font-app-sans), sans-serif;
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: 0.01em;
+  paint-order: stroke;
+  stroke: var(--map);
+  stroke-linejoin: round;
+  stroke-width: 3px;
 }
 
 .journey-route-base,
@@ -149,13 +250,13 @@ button {
 
 .journey-route-base {
   stroke: var(--route-base);
-  stroke-width: 9;
+  stroke-width: 7;
   opacity: 0.3;
 }
 
 .journey-route-traveled {
   stroke: var(--accent);
-  stroke-width: 5;
+  stroke-width: 4;
 }
 
 .stop-leader {
@@ -395,11 +496,22 @@ button {
     bottom: 0.75rem;
     left: 0.75rem;
   }
+
+  .map-zoom-panel {
+    top: 0.75rem;
+    right: 0.75rem;
+  }
+
+  .map-zoom-hint {
+    display: none;
+  }
 }
 
 @media (prefers-reduced-transparency: reduce) {
   .map-legend,
-  .coordinate-readout {
+  .coordinate-readout,
+  .map-zoom-controls,
+  .map-zoom-hint {
     background: var(--surface);
     backdrop-filter: none;
   }

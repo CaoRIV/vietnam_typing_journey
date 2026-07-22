@@ -43,3 +43,41 @@ test("keeps the map and controls usable at each viewport", async ({ page }) => {
   );
   expect(state.progress).toBeCloseTo(0.72, 2);
 });
+
+test("zooms, pans and restores the complete Vietnam view", async ({ page }) => {
+  await page.goto("/");
+
+  const map = page.locator("#journey-map-svg");
+  await page.locator("#map-zoom-in").click();
+  await page.locator("#map-zoom-in").click();
+
+  const zoomedState = await page.evaluate(() =>
+    JSON.parse(window.render_game_to_text?.() ?? "{}"),
+  );
+  expect(zoomedState.mapViewport.zoom).toBeCloseTo(2.25, 2);
+
+  const box = await map.boundingBox();
+  expect(box).not.toBeNull();
+  await page.mouse.move(box!.x + box!.width / 2, box!.y + box!.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(box!.x + box!.width * 0.7, box!.y + box!.height * 0.6);
+  await page.mouse.up();
+
+  const pannedState = await page.evaluate(() =>
+    JSON.parse(window.render_game_to_text?.() ?? "{}"),
+  );
+  expect(pannedState.mapViewport.x).not.toBe(zoomedState.mapViewport.x);
+
+  await page.locator("#map-zoom-reset").click();
+  const resetState = await page.evaluate(() =>
+    JSON.parse(window.render_game_to_text?.() ?? "{}"),
+  );
+  expect(resetState.mapViewport).toMatchObject({
+    zoom: 1,
+    x: 0,
+    y: 0,
+    width: 480,
+    height: 720,
+  });
+  await expect(map).toHaveAttribute("viewBox", "0 0 480 720");
+});
