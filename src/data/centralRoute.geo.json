@@ -1,0 +1,71 @@
+{
+  "id": "central-heritage-prototype",
+  "name": "Con đường di sản",
+  "region": "Miền Trung",
+  "stops": [
+    {
+      "id": "hue",
+      "name": "Huế",
+      "coordinates": [107.5909, 16.4637],
+      "label": { "dx": -42, "dy": -26, "anchor": "end" }
+    },
+    {
+      "id": "hai-van",
+      "name": "Hải Vân",
+      "coordinates": [107.9963, 16.1872],
+      "label": { "dx": -46, "dy": -8, "anchor": "end" }
+    },
+    {
+      "id": "da-nang",
+      "name": "Đà Nẵng",
+      "coordinates": [108.2022, 16.0544],
+      "label": { "dx": 49, "dy": -19, "anchor": "start" }
+    },
+    {
+      "id": "hoi-an",
+      "name": "Hội An",
+      "coordinates": [108.338, 15.8801],
+      "label": { "dx": 49, "dy": 2, "anchor": "start" }
+    },
+    {
+      "id": "my-son",
+      "name": "Mỹ Sơn",
+      "coordinates": [108.1067, 15.7644],
+      "label": { "dx": -49, "dy": 17, "anchor": "end" }
+    },
+    {
+      "id": "nha-trang",
+      "name": "Nha Trang",
+      "coordinates": [109.1967, 12.2388],
+      "label": { "dx": 30, "dy": 5, "anchor": "start" }
+    }
+  ],
+  "route": [
+    { "stopId": "hue", "coordinates": [107.5909, 16.4637] },
+    { "coordinates": [107.7139, 16.3513] },
+    { "stopId": "hai-van", "coordinates": [107.9963, 16.1872] },
+    { "stopId": "da-nang", "coordinates": [108.2022, 16.0544] },
+    { "stopId": "hoi-an", "coordinates": [108.338, 15.8801] },
+    { "stopId": "my-son", "coordinates": [108.1067, 15.7644] },
+    { "coordinates": [108.43, 15.41] },
+    { "coordinates": [108.8, 15.12] },
+    { "coordinates": [109.06, 14.45] },
+    { "coordinates": [109.22, 13.77] },
+    { "coordinates": [109.3, 13.09] },
+    { "stopId": "nha-trang", "coordinates": [109.1967, 12.2388] }
+  ],
+  "archipelagos": [
+    {
+      "id": "hoang-sa",
+      "name": "QĐ. Hoàng Sa",
+      "coordinates": [112, 16.5],
+      "label": { "dx": 10, "dy": -7, "anchor": "start" }
+    },
+    {
+      "id": "truong-sa",
+      "name": "QĐ. Trường Sa",
+      "coordinates": [114, 10],
+      "label": { "dx": 10, "dy": 12, "anchor": "start" }
+    }
+  ]
+}

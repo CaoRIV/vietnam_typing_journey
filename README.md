@@ -62,3 +62,21 @@ public/vehicles/  Hình phương tiện
 ## Design tokens
 
 Các token màu, font và radius được định nghĩa trong `src/index.css`. Theme sáng và tối theo thiết lập hệ điều hành. Be Vietnam Pro và JetBrains Mono được đóng gói cục bộ qua Fontsource.
+
+## Dữ liệu bản đồ
+
+Đường biên được lấy từ bộ Natural Earth 1:10m Admin 0 Countries, biến thể góc nhìn Việt Nam, giấy phép public domain. Tệp GeoJSON gốc được rút gọn về đối tượng Việt Nam; sau đó bản đồ, tuyến đường và toàn bộ điểm dừng được chiếu bằng cùng một phép chiếu Mercator ở thời điểm build.
+
+```bash
+npm run map:fetch     # tải lại đường biên từ nguồn
+npm run map:generate  # tạo SVG path và tọa độ màn hình
+```
+
+Tọa độ kinh độ, vĩ độ của tuyến nằm trong `src/data/centralRoute.geo.json`. Không chỉnh tay tệp `src/data/mapGeometry.generated.ts`.
+
+## Điều khiển bản đồ
+
+- Nút `+` và `−`: phóng to hoặc thu nhỏ từ 1× đến 5×.
+- Nút hiển thị mức zoom: trở về toàn cảnh Việt Nam.
+- Kéo bản đồ sau khi phóng to để xem từng vùng.
+- Desktop hỗ trợ double-click, `Ctrl + con lăn`, các phím `+`, `−`, `0` và phím mũi tên.

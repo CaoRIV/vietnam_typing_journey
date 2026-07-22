@@ -1,0 +1,83 @@
+import { expect, test } from "@playwright/test";
+
+test("moves the vehicle from progress 0 to 1", async ({ page }) => {
+  await page.goto("/");
+
+  await expect(
+    page.getByRole("heading", { name: "Tuyến miền Trung thử nghiệm" }),
+  ).toBeVisible();
+  await expect(page.locator("[data-stop-id]")).toHaveCount(6);
+
+  await page.locator("#journey-play-toggle").click();
+  await page.evaluate(() => window.advanceTime?.(4_000));
+
+  const middleState = await page.evaluate(() =>
+    JSON.parse(window.render_game_to_text?.() ?? "{}"),
+  );
+  expect(middleState.progress).toBeGreaterThanOrEqual(0.49);
+  expect(middleState.progress).toBeLessThan(0.56);
+  expect(middleState.vehicle.y).toBeGreaterThan(390);
+
+  await page.evaluate(() => window.advanceTime?.(4_000));
+  await expect(page.getByText("100%")).toBeVisible();
+  await expect(page.getByText("Đã đến Nha Trang")).toBeVisible();
+
+  const completedState = await page.evaluate(() =>
+    JSON.parse(window.render_game_to_text?.() ?? "{}"),
+  );
+  expect(completedState.mode).toBe("completed");
+  expect(completedState.progress).toBe(1);
+  expect(completedState.nextStop).toBeNull();
+});
+
+test("keeps the map and controls usable at each viewport", async ({ page }) => {
+  await page.goto("/");
+
+  await expect(page.locator("#journey-map-svg")).toBeVisible();
+  await expect(page.locator("#journey-progress")).toBeVisible();
+  await expect(page.locator("#journey-play-toggle")).toBeVisible();
+
+  await page.locator("#journey-progress").fill("0.72");
+  const state = await page.evaluate(() =>
+    JSON.parse(window.render_game_to_text?.() ?? "{}"),
+  );
+  expect(state.progress).toBeCloseTo(0.72, 2);
+});
+
+test("zooms, pans and restores the complete Vietnam view", async ({ page }) => {
+  await page.goto("/");
+
+  const map = page.locator("#journey-map-svg");
+  await page.locator("#map-zoom-in").click();
+  await page.locator("#map-zoom-in").click();
+
+  const zoomedState = await page.evaluate(() =>
+    JSON.parse(window.render_game_to_text?.() ?? "{}"),
+  );
+  expect(zoomedState.mapViewport.zoom).toBeCloseTo(2.25, 2);
+
+  const box = await map.boundingBox();
+  expect(box).not.toBeNull();
+  await page.mouse.move(box!.x + box!.width / 2, box!.y + box!.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(box!.x + box!.width * 0.7, box!.y + box!.height * 0.6);
+  await page.mouse.up();
+
+  const pannedState = await page.evaluate(() =>
+    JSON.parse(window.render_game_to_text?.() ?? "{}"),
+  );
+  expect(pannedState.mapViewport.x).not.toBe(zoomedState.mapViewport.x);
+
+  await page.locator("#map-zoom-reset").click();
+  const resetState = await page.evaluate(() =>
+    JSON.parse(window.render_game_to_text?.() ?? "{}"),
+  );
+  expect(resetState.mapViewport).toMatchObject({
+    zoom: 1,
+    x: 0,
+    y: 0,
+    width: 480,
+    height: 720,
+  });
+  await expect(map).toHaveAttribute("viewBox", "0 0 480 720");
+});
