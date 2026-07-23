@@ -22,19 +22,26 @@ describe("central route map prototype", () => {
     expect(window.render_game_to_text).toBeTypeOf("function");
 
     const state = JSON.parse(window.render_game_to_text!());
+    expect(["svg-fallback", "mapbox-loading"]).toContain(state.mapRenderer);
     expect(state.progress).toBe(0);
     expect(state.stops).toHaveLength(6);
   });
 
-  it("moves the route progress with the range control", () => {
+  it("moves the route progress only when the answer is correct", () => {
     render(<App />);
 
-    const progressControl = screen.getByLabelText("Tiến độ hành trình từ 0 đến 1");
-    fireEvent.input(progressControl, { target: { value: "0.5" } });
+    const typingInput = screen.getByLabelText("Gõ tên địa danh");
+    fireEvent.change(typingInput, { target: { value: "x" } });
+    let state = JSON.parse(window.render_game_to_text!());
+    expect(state.progress).toBe(0);
+    expect(state.game.incorrectInputs).toBe(1);
 
-    const state = JSON.parse(window.render_game_to_text!());
-    expect(state.progress).toBe(0.5);
-    expect(screen.getByText("50%")).toBeInTheDocument();
+    fireEvent.change(typingInput, { target: { value: "hue" } });
+    state = JSON.parse(window.render_game_to_text!());
+
+    expect(state.progress).toBeCloseTo(3 / 33, 3);
+    expect(state.currentStop).toBe("Hải Vân");
+    expect(state.game.correctInputs).toBe(3);
   });
 
   it("zooms the map and restores the full Vietnam view", () => {

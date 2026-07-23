@@ -22,6 +22,9 @@ export type JourneyStop = {
 export const centralRoutePoints: readonly RoutePoint[] =
   generatedMapGeometry.route.points;
 
+export const centralRouteGeoPoints: readonly GeoCoordinates[] =
+  generatedMapGeometry.route.geoPoints;
+
 export const centralRouteStops: readonly JourneyStop[] =
   generatedMapGeometry.route.stops;
 
@@ -29,6 +32,7 @@ export const centralRoute = {
   id: generatedMapGeometry.route.id,
   name: generatedMapGeometry.route.name,
   region: generatedMapGeometry.route.region,
+  geoPoints: centralRouteGeoPoints,
   points: centralRoutePoints,
   stops: centralRouteStops,
 } as const;

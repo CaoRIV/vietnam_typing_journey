@@ -17,12 +17,12 @@ describe("route geometry", () => {
     );
   });
 
-  it("places each stop at an increasing progress", () => {
+  it("places each stop at an increasing progress after the journey origin", () => {
     const progressValues = centralRouteStops.map((stop) =>
       getProgressAtPointIndex(centralRoutePoints, stop.pointIndex),
     );
 
-    expect(progressValues[0]).toBe(0);
+    expect(progressValues[0]).toBeGreaterThan(0);
     expect(progressValues.at(-1)).toBe(1);
     expect(progressValues).toEqual([...progressValues].sort((a, b) => a - b));
   });

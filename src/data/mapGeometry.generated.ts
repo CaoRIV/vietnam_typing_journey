@@ -37,7 +37,65 @@ export const generatedMapGeometry = {
     "id": "central-heritage-prototype",
     "name": "Con đường di sản",
     "region": "Miền Trung",
+    "geoPoints": [
+      [
+        107.35,
+        17
+      ],
+      [
+        107.5909,
+        16.4637
+      ],
+      [
+        107.7139,
+        16.3513
+      ],
+      [
+        107.9963,
+        16.1872
+      ],
+      [
+        108.2022,
+        16.0544
+      ],
+      [
+        108.338,
+        15.8801
+      ],
+      [
+        108.1067,
+        15.7644
+      ],
+      [
+        108.43,
+        15.41
+      ],
+      [
+        108.8,
+        15.12
+      ],
+      [
+        109.06,
+        14.45
+      ],
+      [
+        109.22,
+        13.77
+      ],
+      [
+        109.3,
+        13.09
+      ],
+      [
+        109.1967,
+        12.2388
+      ]
+    ],
     "points": [
+      {
+        "x": 191.45,
+        "y": 332.21
+      },
       {
         "x": 198.61,
         "y": 348.85
@@ -95,7 +153,7 @@ export const generatedMapGeometry = {
           107.5909,
           16.4637
         ],
-        "pointIndex": 0,
+        "pointIndex": 1,
         "label": {
           "x": 156.61,
           "y": 322.85,
@@ -109,7 +167,7 @@ export const generatedMapGeometry = {
           107.9963,
           16.1872
         ],
-        "pointIndex": 2,
+        "pointIndex": 3,
         "label": {
           "x": 164.66,
           "y": 349.42,
@@ -123,7 +181,7 @@ export const generatedMapGeometry = {
           108.2022,
           16.0544
         ],
-        "pointIndex": 3,
+        "pointIndex": 4,
         "label": {
           "x": 265.78,
           "y": 342.52,
@@ -137,7 +195,7 @@ export const generatedMapGeometry = {
           108.338,
           15.8801
         ],
-        "pointIndex": 4,
+        "pointIndex": 5,
         "label": {
           "x": 269.81,
           "y": 368.91,
@@ -151,7 +209,7 @@ export const generatedMapGeometry = {
           108.1067,
           15.7644
         ],
-        "pointIndex": 5,
+        "pointIndex": 6,
         "label": {
           "x": 164.94,
           "y": 387.48,
@@ -165,7 +223,7 @@ export const generatedMapGeometry = {
           109.1967,
           12.2388
         ],
-        "pointIndex": 11,
+        "pointIndex": 12,
         "label": {
           "x": 276.33,
           "y": 483.48,

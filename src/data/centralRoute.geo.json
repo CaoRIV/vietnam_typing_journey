@@ -41,6 +41,7 @@
     }
   ],
   "route": [
+    { "coordinates": [107.35, 17.0] },
     { "stopId": "hue", "coordinates": [107.5909, 16.4637] },
     { "coordinates": [107.7139, 16.3513] },
     { "stopId": "hai-van", "coordinates": [107.9963, 16.1872] },

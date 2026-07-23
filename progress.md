@@ -23,8 +23,28 @@ Original prompt: làm phần 2: Làm prototype bản đồ. Vẽ bản đồ Vi�
 - Điều khiển hỗ trợ nút +/−, kéo chuột hoặc cảm ứng sau khi zoom, double-click, Ctrl + con lăn, phím +/−/0 và phím mũi tên.
 - Mức zoom hiển thị theo hệ số 1×-5× để không nhầm với phần trăm tiến độ hành trình.
 - 8 unit/component test và 6 E2E test desktop/mobile đã đạt sau khi thêm zoom và pan.
+- Đã xây game engine thuần TypeScript với state/action/reducer, chuẩn hóa tiếng Việt, xử lý đúng/sai, backspace, pause/resume, timer, stop split và GameResult version 1.
+- Input thật đã thay điều khiển progress thử nghiệm; ký tự đúng làm xe tiến, ký tự sai giữ nguyên vị trí, hoàn thành địa danh tự chuyển sang điểm kế tiếp.
+- UI hiển thị thời gian, WPM, accuracy, tiến độ, phản hồi bằng chữ và trạng thái hoàn thành; input có label, focus và cấu hình bàn phím mobile.
+- 19 unit/component test và 8 E2E test desktop/mobile đều đạt cho luồng game mới.
+- Đã thêm điểm xuất phát ngắn trước Huế và ánh xạ progress theo từng chặng; hoàn thành mỗi địa danh đưa xe dừng đúng marker tương ứng.
+- Web-game client đã xác nhận trạng thái gõ sai không làm xe tiến và phản hồi bằng chữ; ảnh playing, completed, mobile và mobile dark mode đã được kiểm tra trực tiếp, không có lỗi console.
 
 ## Gợi ý bước tiếp theo
 
-- Kết nối progress với số ký tự gõ đúng trong game engine ở Slice 2.
+- Triển khai Slice 3: polish vòng chơi, trạng thái hướng dẫn, chuyển cảnh và phản hồi âm thanh/chuyển động.
 - Thay dev overlay bằng tùy chọn chỉ bật trong môi trường development khi ra beta.
+
+## 2026-07-23 — Mapbox foundation
+
+- Đã thêm Mapbox GL JS làm lớp render bản đồ tùy chọn qua `VITE_MAPBOX_ACCESS_TOKEN`; token không được ghi vào source hoặc git.
+- Đã giữ SVG hiện tại làm fallback tự động khi thiếu token, token mẫu, WebGL hoặc Mapbox không tải được; game engine không phụ thuộc Mapbox.
+- Dữ liệu sinh tự động nay giữ cả tọa độ WGS84 và tọa độ SVG để hai renderer dùng cùng một progress.
+- Đã thêm lớp tuyến đầy đủ, tuyến đã đi, sáu marker và marker xe cho Mapbox.
+- Mapbox được lazy-load thành chunk riêng; người dùng fallback SVG không tải SDK Mapbox ở lần mở trang ban đầu.
+- Đã cấu hình Vite worker dạng ES module cho Mapbox GL JS 3.26 và production build đã thành công.
+- 21 unit/component test và 8 E2E desktop/mobile đạt; web-game client xác nhận `mapRenderer: svg-fallback` và không có console error khi chưa cấu hình token.
+- TODO tiếp theo: thêm dữ liệu địa điểm du lịch của tỉnh thí điểm, sau đó tích hợp Matrix và Directions API.
+- Đã loại `mapbox-gl` và `mapbox-gl/esm` khỏi Vite dependency optimizer để worker ESM không bị đổi thành đường dẫn cache `node_modules/.vite/deps/worker.js` không tồn tại.
+- Đã sửa xung đột CSS khiến `.mapboxgl-map` ghi đè `position: absolute` và làm container cao 0; Mapbox nay phủ đúng toàn bộ `map-stage`.
+- Đã xác nhận token thật tải Mapbox thành công với `mapRenderer: mapbox`; route, marker, xe, zoom/pan hiển thị trên desktop và 8 E2E desktop/mobile đều đạt.
