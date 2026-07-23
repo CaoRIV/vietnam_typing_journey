@@ -93,10 +93,23 @@ Khởi động lại `npm run dev` sau khi đổi biến môi trường. Nên gi
 - Kéo bản đồ sau khi phóng to để xem từng vùng.
 - Desktop hỗ trợ double-click, `Ctrl + con lăn`, các phím `+`, `−`, `0` và phím mũi tên.
 
+## Prototype tỉnh Huế
+
+Dữ liệu biên tập của tỉnh thí điểm nằm tại `src/data/hueProvince.ts`. Mỗi địa điểm có:
+
+- Tên hiển thị và các đáp án được chấp nhận.
+- Tọa độ WGS84.
+- Mô tả tiếng Việt ngắn.
+- Ảnh, tác giả, giấy phép và nguồn ảnh.
+- Nguồn kiểm chứng nội dung.
+
+Prototype hiện gồm Đại Nội Huế, Chùa Thiên Mụ, Lăng Khải Định, Lăng Minh Mạng và Đồi Vọng Cảnh. Bốn tọa độ di tích dùng dữ liệu UNESCO; ảnh dùng Wikimedia Commons và giữ thông tin ghi công ngay trong dữ liệu dự án.
+
 ## Luật chơi hiện tại
 
-- Gõ lần lượt sáu địa danh từ Huế đến Nha Trang; chấp nhận có dấu, không dấu, viết hoa và khoảng trắng tùy ý.
+- Gõ lần lượt năm điểm tham quan của prototype Huế; chấp nhận có dấu, không dấu, viết hoa, khoảng trắng tùy ý và các tên gọi thay thế đã biên tập.
 - Đồng hồ bắt đầu ở ký tự đúng đầu tiên. Ký tự sai không làm xe tiến lên.
 - Có thể tạm dừng; thời gian tạm dừng không được tính vào kết quả.
 - Giao diện cập nhật progress, CPM, WPM, accuracy và thời gian từng điểm dừng.
-- Hoàn thành Nha Trang sẽ tạo `GameResult` version 1 trong state của game engine.
+- Sau mỗi đáp án đúng, giao diện đánh dấu điểm đã ghé và hiển thị mô tả cùng nguồn nội dung của điểm đó.
+- Hoàn thành Đồi Vọng Cảnh sẽ tạo `GameResult` version 1 trong state của game engine.

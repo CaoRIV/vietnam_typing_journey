@@ -48,3 +48,29 @@ Original prompt: làm phần 2: Làm prototype bản đồ. Vẽ bản đồ Vi�
 - Đã loại `mapbox-gl` và `mapbox-gl/esm` khỏi Vite dependency optimizer để worker ESM không bị đổi thành đường dẫn cache `node_modules/.vite/deps/worker.js` không tồn tại.
 - Đã sửa xung đột CSS khiến `.mapboxgl-map` ghi đè `position: absolute` và làm container cao 0; Mapbox nay phủ đúng toàn bộ `map-stage`.
 - Đã xác nhận token thật tải Mapbox thành công với `mapRenderer: mapbox`; route, marker, xe, zoom/pan hiển thị trên desktop và 8 E2E desktop/mobile đều đạt.
+
+## 2026-07-23 — Prototype tỉnh Huế
+
+- Đã thêm mô hình dữ liệu tỉnh và địa điểm du lịch có kiểu TypeScript riêng, gồm tên, đáp án chấp nhận, tọa độ, mô tả, ảnh, giấy phép ảnh và nguồn nội dung.
+- Prototype Huế gồm Đại Nội Huế, Chùa Thiên Mụ, Lăng Khải Định, Lăng Minh Mạng và Đồi Vọng Cảnh.
+- Bốn tọa độ trong Quần thể Di tích Cố đô Huế dùng dữ liệu UNESCO; Đồi Vọng Cảnh dùng dữ liệu vị trí công khai và nguồn Khám phá Huế.
+- Đã nối năm điểm Huế vào typing engine và Mapbox; Mapbox tự fit camera ở cấp tỉnh.
+- Đã sửa cách tính tiến độ cho đáp án thay thế để tên ngắn như `Đại Nội`, `Ứng Lăng` hoặc `Vọng Cảnh` vẫn đưa xe đến đúng marker và kết quả luôn đạt 100%.
+- Sau khi gõ đúng, giao diện đánh dấu điểm đã ghé và hiển thị ảnh, mô tả cùng liên kết nguồn.
+- Chưa triển khai Matrix API, Directions API hoặc chọn điểm chưa đi gần nhất; đây là phạm vi của bước tiếp theo.
+- Kiểm tra cuối đạt: lint, typecheck, 23 unit/component test, production build và 8 E2E test trên desktop/mobile.
+- Đã xem trực tiếp ảnh chụp desktop, mobile light/dark và trạng thái hoàn thành; camera, marker, ảnh địa điểm và state hiển thị đồng bộ, không có console error mới.
+
+## 2026-07-23 — Chuyển động xe và camera bám theo
+
+- Marker Mapbox đã đổi từ chấm/mũi tên sang biểu tượng xe máy nhìn từ trên xuống, giữ đúng hướng theo bearing của tuyến.
+- Tiến độ gõ và tiến độ hiển thị được tách riêng: mỗi ký tự đúng tạo đích mới, xe nội suy `smoothStep` trong 760 ms và tiếp tục từ vị trí hiện tại nếu người chơi gõ nhanh.
+- Tuyến đã đi, tọa độ xe và `render_game_to_text` được cập nhật ở từng frame; state có thêm `targetMapProgress` để kiểm tra trạng thái giữa animation.
+- Camera Mapbox `easeTo` đồng bộ với xe và nhìn trước 3,5% tuyến để luôn cho thấy hướng di chuyển tiếp theo; chế độ reduced motion vẫn cập nhật tức thời.
+- Đã thêm E2E kiểm tra xe thực sự có trạng thái giữa điểm đầu/đích và camera thay đổi kinh/vĩ độ trên desktop lẫn mobile.
+- Kiểm tra cuối đạt: lint, typecheck, 23 unit/component test, production build và 10 E2E desktop/mobile.
+- Web-game client chính thức và ảnh desktop/mobile đã được xem trực tiếp; biểu tượng xe rõ, camera theo đúng khu vực xe đang chạy, không có console error mới.
+
+## TODO tiếp theo
+
+- Khi tích hợp Directions API, thay polyline tĩnh bằng GeoJSON đường xe chạy thực tế; animation và camera hiện tại có thể tái sử dụng trực tiếp.

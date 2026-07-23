@@ -21,12 +21,14 @@ test("accepts Vietnamese variants and advances only for correct input", async ({
   expect(state.game.incorrectInputs).toBe(1);
   await expect(page.getByText("Ký tự chưa đúng. Xe đang chờ bạn sửa lại.")).toBeVisible();
 
-  await input.fill("Huế");
+  await input.fill("Đại Nội");
   state = await readState(page);
   expect(state.mode).toBe("playing");
-  expect(state.currentStop).toBe("Hải Vân");
-  expect(state.game.correctInputs).toBe(3);
-  expect(state.progress).toBeCloseTo(3 / 33, 3);
+  expect(state.currentStop).toBe("Chùa Thiên Mụ");
+  expect(state.lastVisitedPlace).toBe("Đại Nội Huế");
+  expect(state.game.correctInputs).toBe(9);
+  expect(state.progress).toBeCloseTo(9 / 55, 3);
+  await expect(page.getByRole("heading", { name: "Đại Nội Huế" })).toBeVisible();
 
   await page.evaluate(() => window.advanceTime?.(2_000));
   await page.waitForFunction(() => {
@@ -40,15 +42,21 @@ test("accepts Vietnamese variants and advances only for correct input", async ({
   expect((await readState(page)).game.elapsedMs).toBe(pausedState.game.elapsedMs);
 
   await page.locator("#journey-pause-toggle").click();
-  await input.fill("hai van");
+  await input.fill("chua linh mu");
   state = await readState(page);
-  expect(state.currentStop).toBe("Đà Nẵng");
+  expect(state.currentStop).toBe("Lăng Khải Định");
 });
 
-test("plays through all six stops and creates GameResult", async ({ page }) => {
+test("plays through all five Hue places and creates GameResult", async ({ page }) => {
   await page.goto("/");
   const input = page.locator("#journey-typing-input");
-  const answers = ["hue", "Hải Vân", "DANANG", "hoi an", "myson", "Nha Trang"];
+  const answers = [
+    "dai noi hue",
+    "Chùa Thiên Mụ",
+    "UNG LANG",
+    "minh mang",
+    "Vọng Cảnh",
+  ];
 
   for (const [index, answer] of answers.entries()) {
     await input.fill(answer);
@@ -58,17 +66,17 @@ test("plays through all six stops and creates GameResult", async ({ page }) => {
   }
 
   await expect(page.getByRole("heading", { name: "Hoàn thành hành trình" })).toBeVisible();
-  await expect(page.getByText("Đã đến Nha Trang")).toBeVisible();
+  await expect(page.getByText("Đã khám phá Huế")).toBeVisible();
 
   const state = await readState(page);
   expect(state.mode).toBe("completed");
   expect(state.progress).toBe(1);
   expect(state.result).toMatchObject({
     version: 1,
-    correctInputs: 33,
-    totalCharacters: 33,
+    correctInputs: 55,
+    totalCharacters: 55,
   });
-  expect(state.result.stopSplits).toHaveLength(6);
+  expect(state.result.stopSplits).toHaveLength(5);
 });
 
 test("keeps typing and map controls usable at each viewport", async ({ page }) => {
@@ -85,10 +93,47 @@ test("keeps typing and map controls usable at each viewport", async ({ page }) =
   await expect(page.locator("#journey-typing-input")).toBeVisible();
   await expect(page.locator("#journey-reset")).toBeVisible();
 
-  await page.locator("#journey-typing-input").fill("hu");
+  await page.locator("#journey-typing-input").fill("da");
   const state = await readState(page);
-  expect(state.progress).toBeCloseTo(2 / 33, 3);
-  expect(state.game.input).toBe("hu");
+  expect(state.progress).toBeCloseTo(3 / 55, 3);
+  expect(state.game.input).toBe("da");
+});
+
+test("moves the motorbike smoothly and lets the Mapbox camera follow", async ({ page }) => {
+  await page.goto("/");
+  const before = await waitForMapRenderer(page);
+
+  if (before.mapRenderer !== "mapbox") {
+    await expect(page.locator("#journey-map-svg")).toBeVisible();
+    return;
+  }
+
+  await expect(page.locator(".mapbox-journey-motorbike")).toBeVisible();
+  await page.locator("#journey-typing-input").fill("d");
+
+  await page.waitForFunction(() => {
+    const state = JSON.parse(window.render_game_to_text?.() ?? "{}");
+    return (
+      state.targetMapProgress > 0 &&
+      state.mapProgress > 0 &&
+      state.mapProgress < state.targetMapProgress
+    );
+  });
+
+  const moving = await readState(page);
+  expect(moving.mapProgress).toBeGreaterThan(0);
+  expect(moving.mapProgress).toBeLessThan(moving.targetMapProgress);
+
+  await page.waitForFunction(() => {
+    const state = JSON.parse(window.render_game_to_text?.() ?? "{}");
+    return Math.abs(state.mapProgress - state.targetMapProgress) < 0.0001;
+  });
+
+  const arrived = await readState(page);
+  expect(arrived.vehicle.longitude).not.toBe(before.vehicle.longitude);
+  expect(arrived.vehicle.latitude).not.toBe(before.vehicle.latitude);
+  expect(arrived.camera.longitude).not.toBe(before.camera.longitude);
+  expect(arrived.camera.latitude).not.toBe(before.camera.latitude);
 });
 
 test("zooms, pans and restores the complete Vietnam view", async ({ page }) => {
