@@ -4,6 +4,12 @@ import { defineConfig } from "vite";
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  optimizeDeps: {
+    exclude: ["mapbox-gl", "mapbox-gl/esm"],
+  },
+  worker: {
+    format: "es",
+  },
   server: {
     host: "127.0.0.1",
     port: 5173,

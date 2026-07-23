@@ -74,6 +74,7 @@ const generated = {
     id: routeSource.id,
     name: routeSource.name,
     region: routeSource.region,
+    geoPoints: routeSource.route.map((waypoint) => waypoint.coordinates),
     points: routePoints,
     stops,
   },

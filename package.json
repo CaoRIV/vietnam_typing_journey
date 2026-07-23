@@ -19,8 +19,9 @@
     "check": "npm run lint && npm run typecheck && npm run test && npm run build"
   },
   "dependencies": {
-    "@fontsource/be-vietnam-pro": "^5.2.8",
     "@fontsource-variable/jetbrains-mono": "^5.2.8",
+    "@fontsource/be-vietnam-pro": "^5.2.8",
+    "mapbox-gl": "^3.26.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4"
   },
