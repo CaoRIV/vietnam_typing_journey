@@ -14,12 +14,20 @@ import {
 
 export type MapStopState = "completed" | "current" | "upcoming";
 
+export type MapboxCameraState = {
+  longitude: number;
+  latitude: number;
+  zoom: number;
+};
+
 type MapboxJourneyMapProps = {
   accessToken: string;
   progress: number;
   stopStates: readonly MapStopState[];
   onReady: () => void;
   onError: (error: Error) => void;
+  onVisualProgressChange: (progress: number) => void;
+  onCameraChange: (camera: MapboxCameraState) => void;
 };
 
 type MutableGeoJsonSource = {
@@ -96,14 +104,84 @@ const stopStrokeExpression: ExpressionSpecification = [
   "#ffffff",
 ];
 
+const VEHICLE_ANIMATION_MS = 760;
+const CAMERA_LOOK_AHEAD = 0.035;
+
+const smoothStep = (progress: number) =>
+  progress * progress * (3 - 2 * progress);
+
 function createVehicleElement() {
   const vehicle = document.createElement("div");
   vehicle.className = "mapbox-journey-vehicle";
   vehicle.setAttribute("aria-hidden", "true");
 
-  const arrow = document.createElement("span");
-  arrow.className = "mapbox-journey-vehicle-arrow";
-  vehicle.append(arrow);
+  const svgNamespace = "http://www.w3.org/2000/svg";
+  const icon = document.createElementNS(svgNamespace, "svg");
+  icon.classList.add("mapbox-journey-motorbike");
+  icon.setAttribute("viewBox", "0 0 44 58");
+  icon.setAttribute("focusable", "false");
+
+  const shadow = document.createElementNS(svgNamespace, "ellipse");
+  shadow.classList.add("motorbike-shadow");
+  shadow.setAttribute("cx", "22");
+  shadow.setAttribute("cy", "31");
+  shadow.setAttribute("rx", "11");
+  shadow.setAttribute("ry", "22");
+
+  const rearWheel = document.createElementNS(svgNamespace, "rect");
+  rearWheel.classList.add("motorbike-wheel");
+  rearWheel.setAttribute("x", "18.5");
+  rearWheel.setAttribute("y", "42");
+  rearWheel.setAttribute("width", "7");
+  rearWheel.setAttribute("height", "13");
+  rearWheel.setAttribute("rx", "3.5");
+
+  const frontWheel = rearWheel.cloneNode() as SVGRectElement;
+  frontWheel.setAttribute("y", "3");
+  frontWheel.setAttribute("height", "12");
+
+  const body = document.createElementNS(svgNamespace, "path");
+  body.classList.add("motorbike-body");
+  body.setAttribute(
+    "d",
+    "M22 11 C28 11 31 16 30 22 L27 39 C26.4 44 17.6 44 17 39 L14 22 C13 16 16 11 22 11 Z",
+  );
+
+  const seat = document.createElementNS(svgNamespace, "rect");
+  seat.classList.add("motorbike-seat");
+  seat.setAttribute("x", "17");
+  seat.setAttribute("y", "27");
+  seat.setAttribute("width", "10");
+  seat.setAttribute("height", "15");
+  seat.setAttribute("rx", "5");
+
+  const handlebar = document.createElementNS(svgNamespace, "path");
+  handlebar.classList.add("motorbike-handlebar");
+  handlebar.setAttribute("d", "M10 17 Q22 12 34 17");
+
+  const rider = document.createElementNS(svgNamespace, "circle");
+  rider.classList.add("motorbike-rider");
+  rider.setAttribute("cx", "22");
+  rider.setAttribute("cy", "24");
+  rider.setAttribute("r", "5");
+
+  const light = document.createElementNS(svgNamespace, "circle");
+  light.classList.add("motorbike-light");
+  light.setAttribute("cx", "22");
+  light.setAttribute("cy", "13");
+  light.setAttribute("r", "2.4");
+
+  icon.append(
+    shadow,
+    rearWheel,
+    frontWheel,
+    handlebar,
+    body,
+    seat,
+    rider,
+    light,
+  );
+  vehicle.append(icon);
   return vehicle;
 }
 
@@ -113,13 +191,22 @@ export function MapboxJourneyMap({
   stopStates,
   onReady,
   onError,
+  onVisualProgressChange,
+  onCameraChange,
 }: MapboxJourneyMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const vehicleRef = useRef<mapboxgl.Marker | null>(null);
+  const animationFrameRef = useRef<number | null>(null);
+  const displayedProgressRef = useRef(progress);
   const progressRef = useRef(progress);
   const stopStatesRef = useRef(stopStates);
-  const callbacksRef = useRef({ onReady, onError });
+  const callbacksRef = useRef({
+    onReady,
+    onError,
+    onVisualProgressChange,
+    onCameraChange,
+  });
   useEffect(() => {
     progressRef.current = progress;
   }, [progress]);
@@ -129,8 +216,13 @@ export function MapboxJourneyMap({
   }, [stopStates]);
 
   useEffect(() => {
-    callbacksRef.current = { onReady, onError };
-  }, [onError, onReady]);
+    callbacksRef.current = {
+      onReady,
+      onError,
+      onVisualProgressChange,
+      onCameraChange,
+    };
+  }, [onCameraChange, onError, onReady, onVisualProgressChange]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -162,6 +254,15 @@ export function MapboxJourneyMap({
       );
       map.addControl(new mapboxgl.AttributionControl({ compact: true }));
 
+      const publishCamera = () => {
+        const center = map.getCenter();
+        callbacksRef.current.onCameraChange({
+          longitude: center.lng,
+          latitude: center.lat,
+          zoom: map.getZoom(),
+        });
+      };
+
       const handleError = (event: mapboxgl.ErrorEvent) => {
         if (disposed) return;
         const error =
@@ -172,9 +273,11 @@ export function MapboxJourneyMap({
       };
 
       map.on("error", handleError);
+      map.on("move", publishCamera);
       map.once("load", () => {
         if (disposed) return;
         const currentProgress = progressRef.current;
+        displayedProgressRef.current = currentProgress;
         const position = getGeoRoutePosition(
           centralRoute.points,
           centralRoute.geoPoints,
@@ -270,15 +373,22 @@ export function MapboxJourneyMap({
 
         map.fitBounds(routeBounds, {
           padding: { top: 72, right: 68, bottom: 72, left: 68 },
-          maxZoom: 7.3,
+          maxZoom: 12.5,
           duration: 0,
         });
+        callbacksRef.current.onVisualProgressChange(currentProgress);
+        publishCamera();
         callbacksRef.current.onReady();
       });
 
       return () => {
         disposed = true;
+        if (animationFrameRef.current !== null) {
+          window.cancelAnimationFrame(animationFrameRef.current);
+          animationFrameRef.current = null;
+        }
         map.off("error", handleError);
+        map.off("move", publishCamera);
         vehicleRef.current?.remove();
         vehicleRef.current = null;
         mapRef.current = null;
@@ -295,26 +405,81 @@ export function MapboxJourneyMap({
   useEffect(() => {
     const map = mapRef.current;
     if (!map?.isStyleLoaded()) return;
-    const position = getGeoRoutePosition(
+    if (animationFrameRef.current !== null) {
+      window.cancelAnimationFrame(animationFrameRef.current);
+    }
+
+    const targetProgress = Math.min(1, Math.max(0, progress));
+    const startProgress = displayedProgressRef.current;
+    const reducedMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
+    const duration =
+      reducedMotion || Math.abs(targetProgress - startProgress) < 0.00001
+        ? 0
+        : VEHICLE_ANIMATION_MS;
+    const startedAt = performance.now();
+
+    const lookAheadProgress = Math.min(
+      1,
+      targetProgress + CAMERA_LOOK_AHEAD,
+    );
+    const lookAheadPosition = getGeoRoutePosition(
       centralRoute.points,
       centralRoute.geoPoints,
-      progress,
+      lookAheadProgress,
     );
-    const traveledSource = map.getSource("journey-traveled-route");
-    if (hasSetData(traveledSource)) {
-      traveledSource.setData(
-        createLineFeature(
-          getTraveledGeoCoordinates(
-            centralRoute.points,
-            centralRoute.geoPoints,
-            progress,
-          ),
-        ),
+    map.easeTo({
+      center: toLngLat(lookAheadPosition.coordinates),
+      duration,
+      easing: smoothStep,
+      essential: true,
+    });
+
+    const renderFrame = (now: number) => {
+      const timeProgress =
+        duration === 0 ? 1 : Math.min(1, (now - startedAt) / duration);
+      const easedProgress = smoothStep(timeProgress);
+      const visualProgress =
+        startProgress + (targetProgress - startProgress) * easedProgress;
+      const position = getGeoRoutePosition(
+        centralRoute.points,
+        centralRoute.geoPoints,
+        visualProgress,
       );
-    }
-    vehicleRef.current
-      ?.setLngLat(toLngLat(position.coordinates))
-      .setRotation(position.bearing);
+      const traveledSource = map.getSource("journey-traveled-route");
+      if (hasSetData(traveledSource)) {
+        traveledSource.setData(
+          createLineFeature(
+            getTraveledGeoCoordinates(
+              centralRoute.points,
+              centralRoute.geoPoints,
+              visualProgress,
+            ),
+          ),
+        );
+      }
+      vehicleRef.current
+        ?.setLngLat(toLngLat(position.coordinates))
+        .setRotation(position.bearing);
+      displayedProgressRef.current = visualProgress;
+      callbacksRef.current.onVisualProgressChange(visualProgress);
+
+      if (timeProgress < 1) {
+        animationFrameRef.current = window.requestAnimationFrame(renderFrame);
+      } else {
+        animationFrameRef.current = null;
+      }
+    };
+
+    animationFrameRef.current = window.requestAnimationFrame(renderFrame);
+
+    return () => {
+      if (animationFrameRef.current !== null) {
+        window.cancelAnimationFrame(animationFrameRef.current);
+        animationFrameRef.current = null;
+      }
+    };
   }, [progress]);
 
   useEffect(() => {
@@ -332,7 +497,7 @@ export function MapboxJourneyMap({
       id="journey-mapbox-map"
       className="mapbox-map absolute inset-0 z-[1]"
       role="region"
-      aria-label="Bản đồ tương tác Mapbox của hành trình miền Trung"
+      aria-label="Bản đồ tương tác Mapbox của hành trình di sản Huế"
     />
   );
 }

@@ -32,7 +32,13 @@ const scenarios = [
     complete: true,
   },
 ];
-const answers = ["hue", "hai van", "da nang", "hoi an", "my son", "nha trang"];
+const answers = [
+  "dai noi hue",
+  "chua thien mu",
+  "lang khai dinh",
+  "lang minh mang",
+  "doi vong canh",
+];
 
 fs.mkdirSync(outputDir, { recursive: true });
 const browser = await chromium.launch({ headless: true });
@@ -49,7 +55,13 @@ for (const scenario of scenarios) {
     if (message.type() === "error") errors.push(`${scenario.name}: ${message.text()}`);
   });
   page.on("pageerror", (error) => errors.push(`${scenario.name}: ${String(error)}`));
-  await page.goto(url, { waitUntil: "networkidle" });
+  await page.goto(url, { waitUntil: "domcontentloaded" });
+  await page.waitForFunction(() => typeof window.render_game_to_text === "function");
+  await page.waitForFunction(() => {
+    const state = JSON.parse(window.render_game_to_text?.() ?? "{}");
+    return state.mapRenderer !== "mapbox-loading";
+  });
+  await page.waitForTimeout(500);
 
   if (scenario.complete) {
     for (const answer of answers) {
@@ -57,10 +69,15 @@ for (const scenario of scenarios) {
       await page.evaluate(() => window.advanceTime?.(1_000));
     }
   } else {
-    await page.locator("#journey-typing-input").fill("hue");
+    await page.locator("#journey-typing-input").fill("dai noi hue");
     await page.evaluate(() => window.advanceTime?.(2_000));
-    await page.locator("#journey-typing-input").fill("hai");
+    await page.locator("#journey-typing-input").fill("chua");
   }
+
+  await page.waitForFunction(() => {
+    const image = document.querySelector(".visited-place-image img");
+    return image instanceof HTMLImageElement && image.complete && image.naturalWidth > 0;
+  });
 
   await page.screenshot({
     path: path.join(outputDir, `${scenario.name}.png`),

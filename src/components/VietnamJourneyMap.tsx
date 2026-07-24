@@ -14,6 +14,7 @@ import {
 
 import { centralGameJourney } from "../data/centralGameJourney";
 import { centralRoute, vietnamMapGeometry } from "../data/centralRoute";
+import { huePlaceById } from "../data/hueProvince";
 import { getGameMetrics } from "../game/metrics";
 import { normalizeVietnameseAnswer } from "../game/normalize";
 import { createInitialGameState, gameReducer } from "../game/reducer";
@@ -33,6 +34,7 @@ import {
   getProgressAtPointIndex,
 } from "../lib/routeGeometry";
 import { getGeoRoutePosition } from "../lib/mapboxRoute";
+import type { MapboxCameraState } from "./MapboxJourneyMap";
 
 const MapboxJourneyMap = lazy(async () => {
   const module = await import("./MapboxJourneyMap");
@@ -135,6 +137,7 @@ export function VietnamJourneyMap() {
   const typingInputRef = useRef<HTMLInputElement>(null);
   const viewportRef = useRef<MapViewport>({ ...initialViewport });
   const visualProgressRef = useRef(0);
+  const mapboxCameraRef = useRef<MapboxCameraState | null>(null);
   const dragRef = useRef<{
     pointerId: number;
     clientX: number;
@@ -147,7 +150,15 @@ export function VietnamJourneyMap() {
   const mapProgress = getMapProgressForGame(gameState);
   const currentStop = gameState.stops[gameState.currentStopIndex];
   const nextStop = gameState.stops[gameState.currentStopIndex + 1];
-  const normalizedInputLength = normalizeVietnameseAnswer(gameState.input).length;
+  const lastVisitedIndex =
+    gameState.status === "completed"
+      ? gameState.currentStopIndex
+      : gameState.currentStopIndex - 1;
+  const lastVisitedStop =
+    lastVisitedIndex >= 0 ? gameState.stops[lastVisitedIndex] : undefined;
+  const lastVisitedPlace = lastVisitedStop
+    ? huePlaceById.get(lastVisitedStop.id)
+    : undefined;
 
   useEffect(() => {
     gameStateRef.current = gameState;
@@ -204,26 +215,42 @@ export function VietnamJourneyMap() {
     return { x: transformed.x, y: transformed.y };
   }, []);
 
-  const updateMapProgress = useCallback((nextProgress: number) => {
-    const progress = Math.min(1, Math.max(0, nextProgress));
-    const vehicle = getPointAtProgress(centralRoute.points, progress);
+  const updateMapProgress = useCallback(
+    (nextProgress: number, publishVisualProgress = true) => {
+      const progress = Math.min(1, Math.max(0, nextProgress));
+      const vehicle = getPointAtProgress(centralRoute.points, progress);
+      if (publishVisualProgress) {
+        visualProgressRef.current = progress;
+      }
+      vehicleRef.current?.setAttribute(
+        "transform",
+        `translate(${vehicle.x.toFixed(2)} ${vehicle.y.toFixed(2)}) rotate(${vehicle.angle.toFixed(2)})`,
+      );
+      traveledRouteRef.current?.style.setProperty(
+        "stroke-dashoffset",
+        String(1 - progress),
+      );
+      if (coordinateOutputRef.current) {
+        coordinateOutputRef.current.textContent = `x ${vehicle.x.toFixed(1)}  y ${vehicle.y.toFixed(1)}  góc ${vehicle.angle.toFixed(0)}°`;
+      }
+    },
+    [],
+  );
+
+  const handleMapboxVisualProgress = useCallback((progress: number) => {
     visualProgressRef.current = progress;
-    vehicleRef.current?.setAttribute(
-      "transform",
-      `translate(${vehicle.x.toFixed(2)} ${vehicle.y.toFixed(2)}) rotate(${vehicle.angle.toFixed(2)})`,
-    );
-    traveledRouteRef.current?.style.setProperty(
-      "stroke-dashoffset",
-      String(1 - progress),
-    );
-    if (coordinateOutputRef.current) {
-      coordinateOutputRef.current.textContent = `x ${vehicle.x.toFixed(1)}  y ${vehicle.y.toFixed(1)}  góc ${vehicle.angle.toFixed(0)}°`;
-    }
   }, []);
 
+  const handleMapboxCameraChange = useCallback(
+    (camera: MapboxCameraState) => {
+      mapboxCameraRef.current = camera;
+    },
+    [],
+  );
+
   useEffect(() => {
-    updateMapProgress(mapProgress);
-  }, [mapProgress, updateMapProgress]);
+    updateMapProgress(mapProgress, mapRenderer !== "mapbox");
+  }, [mapProgress, mapRenderer, updateMapProgress]);
 
   useEffect(() => {
     updateMapViewport({ ...initialViewport });
@@ -266,6 +293,7 @@ export function VietnamJourneyMap() {
         centralRoute.geoPoints,
         liveMapProgress,
       );
+      const targetMapProgress = getMapProgressForGame(state);
       const usesMapbox = mapRenderer === "mapbox";
 
       return JSON.stringify({
@@ -290,6 +318,17 @@ export function VietnamJourneyMap() {
         route: centralRoute.name,
         progress: Number(liveMetrics.progress.toFixed(4)),
         mapProgress: Number(liveMapProgress.toFixed(4)),
+        targetMapProgress: Number(targetMapProgress.toFixed(4)),
+        camera:
+          usesMapbox && mapboxCameraRef.current
+            ? {
+                longitude: Number(
+                  mapboxCameraRef.current.longitude.toFixed(5),
+                ),
+                latitude: Number(mapboxCameraRef.current.latitude.toFixed(5)),
+                zoom: Number(mapboxCameraRef.current.zoom.toFixed(3)),
+              }
+            : null,
         vehicle: usesMapbox
           ? {
               longitude: Number(geoVehicle.coordinates[0].toFixed(5)),
@@ -313,6 +352,10 @@ export function VietnamJourneyMap() {
         },
         currentStop: state.stops[state.currentStopIndex]?.displayName ?? null,
         nextStop: state.stops[state.currentStopIndex + 1]?.displayName ?? null,
+        lastVisitedPlace:
+          state.status === "completed"
+            ? state.stops[state.currentStopIndex]?.displayName ?? null
+            : state.stops[state.currentStopIndex - 1]?.displayName ?? null,
         stops: state.stops.map((stop, index) => ({
           name: stop.displayName,
           state:
@@ -332,7 +375,8 @@ export function VietnamJourneyMap() {
       const baseTime = state.lastTimestampMs ?? performance.now();
       dispatch({ type: "TICK", now: baseTime + Math.max(0, elapsedMs) });
     };
-    window.setJourneyProgress = updateMapProgress;
+    window.setJourneyProgress = (progress: number) =>
+      updateMapProgress(progress);
     window.setMapZoom = setMapZoom;
     window.resetMapView = resetMapView;
     window.typeJourneyText = (value: string) => {
@@ -433,7 +477,7 @@ export function VietnamJourneyMap() {
 
   const feedbackText =
     gameState.status === "completed"
-      ? "Bạn đã hoàn thành toàn bộ tuyến miền Trung."
+      ? "Bạn đã tham quan đủ năm điểm của hành trình Huế."
       : gameState.status === "paused"
         ? "Hành trình đang tạm dừng."
         : gameState.feedback === "incorrect"
@@ -449,9 +493,9 @@ export function VietnamJourneyMap() {
       <header className="mx-auto flex max-w-[1400px] items-end justify-between gap-5 pb-5 lg:pb-6">
         <div>
           <p className="font-mono text-[0.7rem] font-semibold uppercase tracking-[0.16em] text-accent">Gõ Xuyên Việt</p>
-          <h1 className="mt-2 text-2xl font-extrabold tracking-[-0.035em] text-foreground sm:text-3xl">Tuyến miền Trung thử nghiệm</h1>
+          <h1 className="mt-2 text-2xl font-extrabold tracking-[-0.035em] text-foreground sm:text-3xl">Tỉnh thí điểm: Huế</h1>
         </div>
-        <p className="hidden max-w-[31ch] text-right text-sm leading-6 text-muted md:block">Gõ đúng từng địa danh để đưa xe đi hết hành trình.</p>
+        <p className="hidden max-w-[34ch] text-right text-sm leading-6 text-muted md:block">Gõ tên từng điểm đến để khám phá một vòng di sản Huế.</p>
       </header>
 
       <div className="mx-auto grid max-w-[1400px] gap-4 lg:grid-cols-[minmax(0,1.62fr)_minmax(20rem,0.78fr)] lg:gap-5">
@@ -476,8 +520,8 @@ export function VietnamJourneyMap() {
             onPointerCancel={endMapDrag}
             onKeyDown={handleMapKeyDown}
           >
-            <title id="map-title">Bản đồ tuyến miền Trung</title>
-            <desc id="map-description">Đường biên Việt Nam từ dữ liệu Natural Earth với sáu điểm từ Huế đến Nha Trang. Xe tiến lên theo số ký tự người chơi gõ đúng.</desc>
+            <title id="map-title">Bản đồ hành trình di sản Huế</title>
+            <desc id="map-description">Năm điểm tham quan thử nghiệm tại Huế. Xe tiến lên theo số ký tự người chơi gõ đúng.</desc>
             <defs>
               <linearGradient id="land-wash" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stopColor="var(--map-land-top)" /><stop offset="1" stopColor="var(--map-land-bottom)" /></linearGradient>
               <filter id="land-shadow" x="-30%" y="-20%" width="160%" height="160%"><feDropShadow dx="0" dy="8" stdDeviation="10" floodColor="var(--map-shadow)" floodOpacity="0.22" /></filter>
@@ -503,6 +547,8 @@ export function VietnamJourneyMap() {
                 accessToken={mapboxAccessToken!}
                 progress={mapProgress}
                 stopStates={markerStates}
+                onVisualProgressChange={handleMapboxVisualProgress}
+                onCameraChange={handleMapboxCameraChange}
                 onReady={() => setMapRenderer("mapbox")}
                 onError={() => setMapRenderer("svg")}
               />
@@ -510,7 +556,7 @@ export function VietnamJourneyMap() {
           ) : null}
 
           {mapRenderer !== "mapbox" ? <div className="map-zoom-panel"><div className="map-zoom-controls" role="group" aria-label="Điều khiển thu phóng bản đồ"><button ref={zoomOutRef} id="map-zoom-out" type="button" aria-label="Thu nhỏ bản đồ" title="Thu nhỏ bản đồ" disabled onClick={() => setMapZoom(viewportRef.current.zoom / ZOOM_STEP)}>−</button><button id="map-zoom-reset" type="button" aria-label="Hiển thị toàn bộ Việt Nam" title="Hiển thị toàn bộ Việt Nam" onClick={resetMapView}><output ref={zoomOutputRef} aria-live="polite">1×</output></button><button ref={zoomInRef} id="map-zoom-in" type="button" aria-label="Phóng to bản đồ" title="Phóng to bản đồ" onClick={() => setMapZoom(viewportRef.current.zoom * ZOOM_STEP)}>+</button></div><span id="map-navigation-help" className="map-zoom-hint">Phóng to rồi kéo để xem từng vùng</span></div> : null}
-          <div className="map-legend" aria-hidden="true"><span className="legend-line" /><span>Tuyến miền Trung</span></div>
+          <div className="map-legend" aria-hidden="true"><span className="legend-line" /><span>Prototype Huế</span></div>
           {mapRenderer !== "mapbox" ? <div className="coordinate-readout"><span>PROGRESS</span><output ref={coordinateOutputRef}>x {initialVehicle.x.toFixed(1)}&nbsp; y {initialVehicle.y.toFixed(1)}&nbsp; góc {initialVehicle.angle.toFixed(0)}°</output></div> : null}
           <figcaption className="sr-only">Xe tiến theo ký tự gõ đúng. Dùng nút thu phóng và kéo để xem bản đồ. Nhấn F để bật hoặc tắt toàn màn hình.</figcaption>
         </figure>
@@ -529,12 +575,12 @@ export function VietnamJourneyMap() {
 
           <section className="mt-6" aria-labelledby="typing-heading">
             {gameState.status === "completed" ? (
-              <div className="completion-panel" role="status"><p className="text-sm font-bold text-accent">Đã đến Nha Trang</p><h3 id="typing-heading" className="mt-2 text-2xl font-extrabold tracking-[-0.03em] text-foreground">Hoàn thành hành trình</h3><p className="mt-2 text-sm leading-6 text-muted">{gameState.result?.correctInputs} ký tự đúng, {gameState.result?.incorrectInputs} lần gõ sai trong {formatDuration(gameState.result?.durationMs ?? 0)}.</p></div>
+              <div className="completion-panel" role="status"><p className="text-sm font-bold text-accent">Đã khám phá Huế</p><h3 id="typing-heading" className="mt-2 text-2xl font-extrabold tracking-[-0.03em] text-foreground">Hoàn thành hành trình</h3><p className="mt-2 text-sm leading-6 text-muted">{gameState.result?.correctInputs} ký tự đúng, {gameState.result?.incorrectInputs} lần gõ sai trong {formatDuration(gameState.result?.durationMs ?? 0)}.</p></div>
             ) : (
               <>
-                <p className="text-xs font-bold uppercase tracking-[0.12em] text-muted">Địa danh hiện tại</p>
+                <p className="text-xs font-bold uppercase tracking-[0.12em] text-muted">Điểm đến hiện tại</p>
                 <h3 id="typing-heading" className="sr-only">Gõ {currentStop.displayName}</h3>
-                <div className="mt-2" aria-label={currentStop.displayName}><PromptCharacters displayName={currentStop.displayName} correctLength={normalizedInputLength} completed={false} /></div>
+                <div className="mt-2" aria-label={currentStop.displayName}><PromptCharacters displayName={currentStop.displayName} correctLength={gameState.maxCorrectLength} completed={false} /></div>
                 <label className="mt-5 block text-sm font-bold text-foreground" htmlFor="journey-typing-input">Gõ tên địa danh</label>
                 <div className="typing-input-shell mt-2" data-feedback={gameState.feedback} data-paused={gameState.status === "paused"}>
                   <input ref={typingInputRef} id="journey-typing-input" value={gameState.input} type="text" inputMode="text" autoComplete="off" autoCapitalize="none" enterKeyHint="next" spellCheck={false} disabled={gameState.status === "paused"} placeholder={`Ví dụ: ${normalizeVietnameseAnswer(currentStop.displayName)}`} aria-describedby="typing-feedback" onChange={(event) => dispatch({ type: "INPUT", value: event.currentTarget.value, now: performance.now(), completedAt: new Date().toISOString() })} />
@@ -549,13 +595,39 @@ export function VietnamJourneyMap() {
             </div>
           </section>
 
+          {lastVisitedPlace ? (
+            <article className="visited-place mt-6" aria-labelledby="visited-place-heading">
+              <div className="visited-place-image">
+                <img
+                  src={lastVisitedPlace.image.src}
+                  alt={lastVisitedPlace.image.alt}
+                  loading="lazy"
+                  decoding="async"
+                />
+              </div>
+              <div className="visited-place-copy">
+                <p className="text-xs font-bold uppercase tracking-[0.12em] text-accent">Vừa ghé thăm</p>
+                <h3 id="visited-place-heading" className="mt-1 text-lg font-extrabold tracking-[-0.025em] text-foreground">{lastVisitedPlace.name}</h3>
+                <p className="mt-2 text-sm leading-6 text-muted">{lastVisitedPlace.shortDescription}</p>
+                <p className="mt-3 text-xs leading-5 text-muted">
+                  Ảnh: {lastVisitedPlace.image.author},{" "}
+                  <a href={lastVisitedPlace.image.licenseUrl} target="_blank" rel="noreferrer">{lastVisitedPlace.image.license}</a>
+                  {" · "}
+                  <a href={lastVisitedPlace.image.sourceUrl} target="_blank" rel="noreferrer">nguồn ảnh</a>
+                  {" · "}
+                  <a href={lastVisitedPlace.contentSources[0].url} target="_blank" rel="noreferrer">nguồn nội dung</a>
+                </p>
+              </div>
+            </article>
+          ) : null}
+
           <section aria-labelledby="progress-heading" className="mt-6">
             <div className="flex items-center justify-between gap-4"><h3 id="progress-heading" className="text-sm font-bold text-foreground">Tiến độ hành trình</h3><output className="font-mono text-sm font-bold text-accent">{Math.round(metrics.progress * 100)}%</output></div>
             <div className="game-progress-track mt-3" role="progressbar" aria-label="Tiến độ hành trình" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(metrics.progress * 100)}><span style={{ transform: `scaleX(${metrics.progress})` }} /></div>
           </section>
 
           <section aria-labelledby="stops-heading" className="mt-6 lg:mt-auto lg:pt-6">
-            <div className="flex items-baseline justify-between gap-4"><h3 id="stops-heading" className="text-sm font-bold text-foreground">Các điểm dừng</h3>{nextStop && gameState.status !== "completed" ? <p className="text-xs text-muted">Tiếp theo: {nextStop.displayName}</p> : null}</div>
+            <div className="flex items-baseline justify-between gap-4"><h3 id="stops-heading" className="text-sm font-bold text-foreground">Điểm tham quan</h3>{nextStop && gameState.status !== "completed" ? <p className="text-xs text-muted">Tiếp theo: {nextStop.displayName}</p> : null}</div>
             <ol className="route-board mt-3 grid grid-cols-2 gap-x-4 gap-y-2 p-0 sm:grid-cols-3 lg:grid-cols-2">{centralRoute.stops.map((stop, index) => <li key={stop.id} data-state={markerStates[index]} className="route-board-stop grid grid-cols-[1.7rem_1fr] items-center gap-2"><span className="route-stop-number font-mono text-xs font-bold">{String(index + 1).padStart(2, "0")}</span><span className="text-sm font-semibold">{stop.name}</span></li>)}</ol>
           </section>
         </aside>

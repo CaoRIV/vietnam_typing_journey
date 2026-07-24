@@ -65,6 +65,10 @@
     --map-contour: #376963;
     --route-base: #d9cba9;
   }
+
+  .mapbox-map .mapboxgl-ctrl-group .mapboxgl-ctrl-icon {
+    filter: invert(1);
+  }
 }
 
 * {
@@ -163,24 +167,61 @@ button {
 
 .mapbox-journey-vehicle {
   display: grid;
-  width: 2.25rem;
-  height: 2.25rem;
+  width: 2.75rem;
+  height: 3.625rem;
   place-items: center;
-  border: 3px solid #fffaf0;
-  border-radius: 999px;
-  background: #e3483e;
-  box-shadow:
-    0 0 0 2px rgb(21 60 46 / 0.35),
-    0 7px 18px rgb(21 60 46 / 0.34);
+  pointer-events: none;
+  filter: drop-shadow(0 7px 8px rgb(21 60 46 / 0.36));
+  will-change: transform;
 }
 
-.mapbox-journey-vehicle-arrow {
-  width: 0;
-  height: 0;
-  border-right: 0.36rem solid transparent;
-  border-bottom: 0.72rem solid #fffaf0;
-  border-left: 0.36rem solid transparent;
-  transform: translateY(-0.08rem);
+.mapbox-journey-motorbike {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.motorbike-shadow {
+  fill: rgb(21 60 46 / 0.22);
+}
+
+.motorbike-wheel {
+  fill: #18322a;
+  stroke: #fffaf0;
+  stroke-width: 2;
+}
+
+.motorbike-body {
+  fill: #e3483e;
+  stroke: #fffaf0;
+  stroke-linejoin: round;
+  stroke-width: 2;
+}
+
+.motorbike-seat {
+  fill: #18322a;
+  stroke: #fffaf0;
+  stroke-width: 1.5;
+}
+
+.motorbike-handlebar {
+  fill: none;
+  stroke: #18322a;
+  stroke-linecap: round;
+  stroke-width: 3;
+}
+
+.motorbike-rider {
+  fill: #f2b889;
+  stroke: #fffaf0;
+  stroke-width: 1.5;
+}
+
+.motorbike-light {
+  fill: #fff3a6;
+  stroke: #fffaf0;
+  stroke-width: 1.2;
 }
 
 #journey-map-svg {
@@ -658,6 +699,43 @@ button {
   padding: 1rem 1.1rem;
 }
 
+.visited-place {
+  display: grid;
+  grid-template-columns: 7rem minmax(0, 1fr);
+  gap: 1rem;
+  border-top: 1px solid var(--border);
+  padding-top: 1.25rem;
+}
+
+.visited-place-image {
+  min-height: 8rem;
+  overflow: hidden;
+  border-radius: var(--radius-control);
+  background:
+    linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--forest) 18%, var(--surface-strong)),
+      var(--surface-strong)
+    );
+}
+
+.visited-place-image img {
+  width: 100%;
+  height: 100%;
+  min-height: 8rem;
+  object-fit: cover;
+}
+
+.visited-place-copy a {
+  color: var(--foreground);
+  font-weight: 700;
+  text-underline-offset: 0.18em;
+}
+
+.visited-place-copy a:hover {
+  color: var(--accent);
+}
+
 .journey-slider {
   height: 2rem;
   margin-inline: 0;
@@ -772,6 +850,15 @@ button {
 
   .map-zoom-hint {
     display: none;
+  }
+
+  .visited-place {
+    grid-template-columns: 5.5rem minmax(0, 1fr);
+  }
+
+  .visited-place-image,
+  .visited-place-image img {
+    min-height: 7rem;
   }
 }
 

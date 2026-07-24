@@ -56,9 +56,10 @@ function handleInput(state: GameState, action: Extract<GameAction, { type: "INPU
     currentStop.displayName,
     ...currentStop.acceptedAnswers,
   ]);
-  const matchesPrefix = acceptedAnswers.some((answer) =>
+  const matchingAnswers = acceptedAnswers.filter((answer) =>
     answer.startsWith(nextAnswer),
   );
+  const matchesPrefix = matchingAnswers.length > 0;
 
   if (!matchesPrefix) {
     return {
@@ -69,9 +70,23 @@ function handleInput(state: GameState, action: Extract<GameAction, { type: "INPU
     };
   }
 
-  const isNewCorrectCharacter = nextAnswer.length > clockedState.maxCorrectLength;
+  const targetLength = getStopCharacterCount(currentStop.displayName);
+  const creditedLength = matchingAnswers.reduce((longestCredit, answer) => {
+    const answerProgress = answer.length === 0 ? 0 : nextAnswer.length / answer.length;
+    return Math.max(
+      longestCredit,
+      Math.min(
+        targetLength,
+        nextAnswer.length > 0
+          ? Math.max(1, Math.floor(answerProgress * targetLength))
+          : 0,
+      ),
+    );
+  }, 0);
+  const isNewCorrectCharacter =
+    creditedLength > clockedState.maxCorrectLength;
   const addedCorrectCharacters = isNewCorrectCharacter
-    ? nextAnswer.length - clockedState.maxCorrectLength
+    ? creditedLength - clockedState.maxCorrectLength
     : 0;
   const startedState: GameState =
     clockedState.status === "ready" && addedCorrectCharacters > 0
@@ -79,7 +94,7 @@ function handleInput(state: GameState, action: Extract<GameAction, { type: "INPU
       : clockedState;
   const maxCorrectLength = Math.max(
     startedState.maxCorrectLength,
-    nextAnswer.length,
+    creditedLength,
   );
   const correctInputs = startedState.correctInputs + addedCorrectCharacters;
   const completedAnswer = acceptedAnswers.includes(nextAnswer);

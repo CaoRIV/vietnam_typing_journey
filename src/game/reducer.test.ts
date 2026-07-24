@@ -22,22 +22,29 @@ describe("game reducer", () => {
   it("accepts accented and unaccented answers and advances stops", () => {
     let state = createInitialGameState(centralGameJourney);
 
-    state = gameReducer(state, { type: "INPUT", value: "Huế", now: 0 });
+    state = gameReducer(state, { type: "INPUT", value: "Đại Nội", now: 0 });
     expect(state.currentStopIndex).toBe(1);
-    expect(state.stopSplits[0]).toMatchObject({ stopId: "hue", correctInputs: 3 });
+    expect(state.stopSplits[0]).toMatchObject({
+      stopId: "imperial-city-hue",
+      correctInputs: 9,
+    });
 
-    state = gameReducer(state, { type: "INPUT", value: "hai van", now: 1_000 });
+    state = gameReducer(state, {
+      type: "INPUT",
+      value: "chua linh mu",
+      now: 1_000,
+    });
     expect(state.currentStopIndex).toBe(2);
-    expect(state.correctInputs).toBe(9);
+    expect(state.correctInputs).toBe(20);
   });
 
   it("allows backspace without counting the same character twice", () => {
     let state = createInitialGameState(centralGameJourney);
-    state = gameReducer(state, { type: "INPUT", value: "hu", now: 0 });
-    state = gameReducer(state, { type: "INPUT", value: "h", now: 100 });
-    state = gameReducer(state, { type: "INPUT", value: "hu", now: 200 });
+    state = gameReducer(state, { type: "INPUT", value: "da", now: 0 });
+    state = gameReducer(state, { type: "INPUT", value: "d", now: 100 });
+    state = gameReducer(state, { type: "INPUT", value: "da", now: 200 });
 
-    expect(state.correctInputs).toBe(2);
+    expect(state.correctInputs).toBe(3);
     expect(state.incorrectInputs).toBe(0);
   });
 
@@ -48,14 +55,17 @@ describe("game reducer", () => {
     state = gameReducer(state, { type: "PAUSE", now: 1_000 });
     state = gameReducer(state, { type: "TICK", now: 9_000 });
     state = gameReducer(state, { type: "RESUME", now: 10_000 });
-    state = gameReducer(state, { type: "INPUT", value: "Huế", now: 11_000 });
+    state = gameReducer(state, {
+      type: "INPUT",
+      value: "Đại Nội Huế",
+      now: 11_000,
+    });
 
     const remainingAnswers = [
-      "Hải Vân",
-      "Đà Nẵng",
-      "Hội An",
-      "Mỹ Sơn",
-      "Nha Trang",
+      "Chùa Thiên Mụ",
+      "Lăng Khải Định",
+      "Lăng Minh Mạng",
+      "Đồi Vọng Cảnh",
     ];
     remainingAnswers.forEach((answer, index) => {
       state = gameReducer(state, {
@@ -67,14 +77,14 @@ describe("game reducer", () => {
     });
 
     expect(state.status).toBe("completed");
-    expect(state.elapsedMs).toBe(7_000);
+    expect(state.elapsedMs).toBe(6_000);
     expect(state.result).toMatchObject({
       version: 1,
       journeyId: centralGameJourney.journeyId,
-      correctInputs: 33,
-      totalCharacters: 33,
+      correctInputs: 55,
+      totalCharacters: 55,
       completedAt: "2026-07-22T00:00:00.000Z",
     });
-    expect(state.result?.stopSplits).toHaveLength(6);
+    expect(state.result?.stopSplits).toHaveLength(5);
   });
 });

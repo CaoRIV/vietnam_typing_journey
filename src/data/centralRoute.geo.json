@@ -1,59 +1,48 @@
 {
-  "id": "central-heritage-prototype",
-  "name": "Con đường di sản",
-  "region": "Miền Trung",
+  "id": "hue-heritage-prototype",
+  "name": "Hành trình di sản Huế",
+  "region": "Huế",
   "stops": [
     {
-      "id": "hue",
-      "name": "Huế",
-      "coordinates": [107.5909, 16.4637],
-      "label": { "dx": -42, "dy": -26, "anchor": "end" }
+      "id": "imperial-city-hue",
+      "name": "Đại Nội Huế",
+      "coordinates": [107.577778, 16.469444],
+      "label": { "dx": 36, "dy": -22, "anchor": "start" }
     },
     {
-      "id": "hai-van",
-      "name": "Hải Vân",
-      "coordinates": [107.9963, 16.1872],
-      "label": { "dx": -46, "dy": -8, "anchor": "end" }
+      "id": "thien-mu-pagoda",
+      "name": "Chùa Thiên Mụ",
+      "coordinates": [107.54455, 16.454631],
+      "label": { "dx": -38, "dy": -10, "anchor": "end" }
     },
     {
-      "id": "da-nang",
-      "name": "Đà Nẵng",
-      "coordinates": [108.2022, 16.0544],
-      "label": { "dx": 49, "dy": -19, "anchor": "start" }
+      "id": "khai-dinh-tomb",
+      "name": "Lăng Khải Định",
+      "coordinates": [107.590321, 16.398969],
+      "label": { "dx": 39, "dy": 17, "anchor": "start" }
     },
     {
-      "id": "hoi-an",
-      "name": "Hội An",
-      "coordinates": [108.338, 15.8801],
-      "label": { "dx": 49, "dy": 2, "anchor": "start" }
+      "id": "minh-mang-tomb",
+      "name": "Lăng Minh Mạng",
+      "coordinates": [107.568876, 16.387733],
+      "label": { "dx": -39, "dy": 28, "anchor": "end" }
     },
     {
-      "id": "my-son",
-      "name": "Mỹ Sơn",
-      "coordinates": [108.1067, 15.7644],
-      "label": { "dx": -49, "dy": 17, "anchor": "end" }
-    },
-    {
-      "id": "nha-trang",
-      "name": "Nha Trang",
-      "coordinates": [109.1967, 12.2388],
-      "label": { "dx": 30, "dy": 5, "anchor": "start" }
+      "id": "vong-canh-hill",
+      "name": "Đồi Vọng Cảnh",
+      "coordinates": [107.56257, 16.42707],
+      "label": { "dx": -39, "dy": 9, "anchor": "end" }
     }
   ],
   "route": [
-    { "coordinates": [107.35, 17.0] },
-    { "stopId": "hue", "coordinates": [107.5909, 16.4637] },
-    { "coordinates": [107.7139, 16.3513] },
-    { "stopId": "hai-van", "coordinates": [107.9963, 16.1872] },
-    { "stopId": "da-nang", "coordinates": [108.2022, 16.0544] },
-    { "stopId": "hoi-an", "coordinates": [108.338, 15.8801] },
-    { "stopId": "my-son", "coordinates": [108.1067, 15.7644] },
-    { "coordinates": [108.43, 15.41] },
-    { "coordinates": [108.8, 15.12] },
-    { "coordinates": [109.06, 14.45] },
-    { "coordinates": [109.22, 13.77] },
-    { "coordinates": [109.3, 13.09] },
-    { "stopId": "nha-trang", "coordinates": [109.1967, 12.2388] }
+    { "coordinates": [107.591, 16.485] },
+    { "stopId": "imperial-city-hue", "coordinates": [107.577778, 16.469444] },
+    { "stopId": "thien-mu-pagoda", "coordinates": [107.54455, 16.454631] },
+    { "coordinates": [107.557, 16.437] },
+    { "stopId": "khai-dinh-tomb", "coordinates": [107.590321, 16.398969] },
+    { "stopId": "minh-mang-tomb", "coordinates": [107.568876, 16.387733] },
+    { "coordinates": [107.558, 16.407] },
+    { "stopId": "vong-canh-hill", "coordinates": [107.56257, 16.42707] }
   ],
   "archipelagos": [
     {

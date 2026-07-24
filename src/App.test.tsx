@@ -7,27 +7,31 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe("central route map prototype", () => {
-  it("renders all six stops and exposes the map state", () => {
+describe("Hue tourism map prototype", () => {
+  it("renders all five places and exposes the map state", () => {
     const { container } = render(<App />);
 
     expect(
-      screen.getByRole("heading", { name: "Tuyến miền Trung thử nghiệm" }),
+      screen.getByRole("heading", { name: "Tỉnh thí điểm: Huế" }),
     ).toBeInTheDocument();
-    expect(container.querySelectorAll("[data-stop-id]")).toHaveLength(6);
-    expect(container.querySelector('[data-stop-id="hue"]')).toHaveTextContent("Huế");
-    expect(container.querySelector('[data-stop-id="nha-trang"]')).toHaveTextContent(
-      "Nha Trang",
+    expect(container.querySelectorAll("[data-stop-id]")).toHaveLength(5);
+    expect(
+      container.querySelector('[data-stop-id="imperial-city-hue"]'),
+    ).toHaveTextContent("Đại Nội Huế");
+    expect(
+      container.querySelector('[data-stop-id="vong-canh-hill"]'),
+    ).toHaveTextContent(
+      "Đồi Vọng Cảnh",
     );
     expect(window.render_game_to_text).toBeTypeOf("function");
 
     const state = JSON.parse(window.render_game_to_text!());
     expect(["svg-fallback", "mapbox-loading"]).toContain(state.mapRenderer);
     expect(state.progress).toBe(0);
-    expect(state.stops).toHaveLength(6);
+    expect(state.stops).toHaveLength(5);
   });
 
-  it("moves the route progress only when the answer is correct", () => {
+  it("moves the route progress and reveals the visited place after a correct answer", () => {
     render(<App />);
 
     const typingInput = screen.getByLabelText("Gõ tên địa danh");
@@ -36,12 +40,14 @@ describe("central route map prototype", () => {
     expect(state.progress).toBe(0);
     expect(state.game.incorrectInputs).toBe(1);
 
-    fireEvent.change(typingInput, { target: { value: "hue" } });
+    fireEvent.change(typingInput, { target: { value: "dai noi" } });
     state = JSON.parse(window.render_game_to_text!());
 
-    expect(state.progress).toBeCloseTo(3 / 33, 3);
-    expect(state.currentStop).toBe("Hải Vân");
-    expect(state.game.correctInputs).toBe(3);
+    expect(state.progress).toBeCloseTo(9 / 55, 3);
+    expect(state.currentStop).toBe("Chùa Thiên Mụ");
+    expect(state.lastVisitedPlace).toBe("Đại Nội Huế");
+    expect(state.game.correctInputs).toBe(9);
+    expect(screen.getByRole("heading", { name: "Đại Nội Huế" })).toBeInTheDocument();
   });
 
   it("zooms the map and restores the full Vietnam view", () => {
