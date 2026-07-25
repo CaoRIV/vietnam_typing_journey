@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { huePlaceById, hueProvince } from "./hueProvince";
+import { createGameConfig, createPlaceIndex } from "../journey/model";
+import { hueProvince } from "./hueProvince";
 
 describe("hue province prototype data", () => {
   it("defines five complete and uniquely identified tourism places", () => {
@@ -24,17 +25,50 @@ describe("hue province prototype data", () => {
   });
 
   it("provides common alternative answers for the typing engine", () => {
-    expect(huePlaceById.get("imperial-city-hue")?.acceptedAnswers).toContain(
+    const placeById = createPlaceIndex(hueProvince);
+
+    expect(placeById.get("imperial-city-hue")?.acceptedAnswers).toContain(
       "Đại Nội",
     );
-    expect(huePlaceById.get("thien-mu-pagoda")?.acceptedAnswers).toContain(
+    expect(placeById.get("thien-mu-pagoda")?.acceptedAnswers).toContain(
       "Chùa Linh Mụ",
     );
-    expect(huePlaceById.get("khai-dinh-tomb")?.acceptedAnswers).toContain(
+    expect(placeById.get("khai-dinh-tomb")?.acceptedAnswers).toContain(
       "Ứng Lăng",
     );
-    expect(huePlaceById.get("minh-mang-tomb")?.acceptedAnswers).toContain(
+    expect(placeById.get("minh-mang-tomb")?.acceptedAnswers).toContain(
       "Hiếu Lăng",
+    );
+  });
+
+  it("builds a game config from the route without Hue-specific engine code", () => {
+    const gameConfig = createGameConfig(hueProvince);
+
+    expect(gameConfig.journeyId).toBe(hueProvince.id);
+    expect(gameConfig.stops).toHaveLength(hueProvince.route.stops.length);
+    expect(gameConfig.stops[0]).toMatchObject({
+      id: "imperial-city-hue",
+      displayName: "Đại Nội Huế",
+    });
+  });
+
+  it("fails fast when a route references missing place content", () => {
+    const invalidJourney = {
+      ...hueProvince,
+      id: "invalid-journey",
+      route: {
+        ...hueProvince.route,
+        stops: [
+          {
+            ...hueProvince.route.stops[0]!,
+            id: "missing-place",
+          },
+        ],
+      },
+    };
+
+    expect(() => createGameConfig(invalidJourney)).toThrow(
+      'route references missing place "missing-place"',
     );
   });
 });

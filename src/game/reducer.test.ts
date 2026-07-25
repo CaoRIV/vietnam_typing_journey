@@ -1,12 +1,15 @@
 import { describe, expect, it } from "vitest";
 
-import { centralGameJourney } from "../data/centralGameJourney";
+import { hueProvince } from "../data/hueProvince";
+import { createGameConfig } from "../journey/model";
 import { getGameMetrics } from "./metrics";
 import { createInitialGameState, gameReducer } from "./reducer";
 
 describe("game reducer", () => {
+  const hueGameJourney = createGameConfig(hueProvince);
+
   it("starts on the first correct character and ignores an incorrect advance", () => {
-    let state = createInitialGameState(centralGameJourney);
+    let state = createInitialGameState(hueGameJourney);
 
     state = gameReducer(state, { type: "INPUT", value: "x", now: 100 });
     expect(state.status).toBe("ready");
@@ -20,7 +23,7 @@ describe("game reducer", () => {
   });
 
   it("accepts accented and unaccented answers and advances stops", () => {
-    let state = createInitialGameState(centralGameJourney);
+    let state = createInitialGameState(hueGameJourney);
 
     state = gameReducer(state, { type: "INPUT", value: "Đại Nội", now: 0 });
     expect(state.currentStopIndex).toBe(1);
@@ -39,7 +42,7 @@ describe("game reducer", () => {
   });
 
   it("allows backspace without counting the same character twice", () => {
-    let state = createInitialGameState(centralGameJourney);
+    let state = createInitialGameState(hueGameJourney);
     state = gameReducer(state, { type: "INPUT", value: "da", now: 0 });
     state = gameReducer(state, { type: "INPUT", value: "d", now: 100 });
     state = gameReducer(state, { type: "INPUT", value: "da", now: 200 });
@@ -49,7 +52,7 @@ describe("game reducer", () => {
   });
 
   it("excludes paused time and creates a complete versioned result", () => {
-    let state = createInitialGameState(centralGameJourney);
+    let state = createInitialGameState(hueGameJourney);
     state = gameReducer(state, { type: "INPUT", value: "h", now: 0 });
     state = gameReducer(state, { type: "TICK", now: 1_000 });
     state = gameReducer(state, { type: "PAUSE", now: 1_000 });
@@ -80,7 +83,7 @@ describe("game reducer", () => {
     expect(state.elapsedMs).toBe(6_000);
     expect(state.result).toMatchObject({
       version: 1,
-      journeyId: centralGameJourney.journeyId,
+      journeyId: hueGameJourney.journeyId,
       correctInputs: 55,
       totalCharacters: 55,
       completedAt: "2026-07-22T00:00:00.000Z",

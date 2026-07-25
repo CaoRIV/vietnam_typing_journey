@@ -8,6 +8,18 @@ const outputDir = path.resolve(
 );
 const scenarios = [
   {
+    name: "desktop-province-selector",
+    viewport: { width: 1280, height: 720 },
+    colorScheme: "light",
+    selector: true,
+  },
+  {
+    name: "mobile-province-selector",
+    viewport: { width: 390, height: 844 },
+    colorScheme: "light",
+    selector: true,
+  },
+  {
     name: "desktop-playing",
     viewport: { width: 1280, height: 720 },
     colorScheme: "light",
@@ -55,8 +67,26 @@ for (const scenario of scenarios) {
     if (message.type() === "error") errors.push(`${scenario.name}: ${message.text()}`);
   });
   page.on("pageerror", (error) => errors.push(`${scenario.name}: ${String(error)}`));
-  await page.goto(url, { waitUntil: "domcontentloaded" });
+  const scenarioUrl = new URL(
+    scenario.selector ? "/ban-do" : "/hanh-trinh/hue",
+    url,
+  ).toString();
+  await page.goto(scenarioUrl, { waitUntil: "domcontentloaded" });
   await page.waitForFunction(() => typeof window.render_game_to_text === "function");
+
+  if (scenario.selector) {
+    await page.screenshot({
+      path: path.join(outputDir, `${scenario.name}.png`),
+      fullPage: true,
+    });
+    fs.writeFileSync(
+      path.join(outputDir, `${scenario.name}.json`),
+      await page.evaluate(() => window.render_game_to_text?.() ?? "null"),
+    );
+    await context.close();
+    continue;
+  }
+
   await page.waitForFunction(() => {
     const state = JSON.parse(window.render_game_to_text?.() ?? "{}");
     return state.mapRenderer !== "mapbox-loading";

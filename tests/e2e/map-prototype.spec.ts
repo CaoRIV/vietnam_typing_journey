@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 
 const readState = async (page: import("@playwright/test").Page) =>
   page.evaluate(() => JSON.parse(window.render_game_to_text?.() ?? "{}"));
+const HUE_JOURNEY_PATH = "/hanh-trinh/hue";
 
 const waitForMapRenderer = async (page: import("@playwright/test").Page) => {
   await page.waitForFunction(() => {
@@ -11,8 +12,32 @@ const waitForMapRenderer = async (page: import("@playwright/test").Page) => {
   return readState(page);
 };
 
+test("opens Hue from the national selector and supports browser navigation", async ({ page }) => {
+  await page.goto("/ban-do");
+
+  await expect(page.getByRole("heading", { name: "Chọn hành trình" })).toBeVisible();
+  const selectorState = await readState(page);
+  expect(selectorState).toMatchObject({
+    mode: "province-select",
+    totalProvinces: 34,
+  });
+  expect(selectorState.availableJourneys).toHaveLength(1);
+
+  await page.locator("#open-hue-journey").click();
+  await expect(page).toHaveURL(/\/hanh-trinh\/hue$/);
+  await expect(page.locator("#journey-typing-input")).toBeVisible();
+
+  await page.goBack();
+  await expect(page.getByRole("heading", { name: "Chọn hành trình" })).toBeVisible();
+
+  await page.goForward();
+  await expect(page.locator("#journey-typing-input")).toBeVisible();
+  await page.locator("#back-to-province-map").click();
+  await expect(page).toHaveURL(/\/ban-do$/);
+});
+
 test("accepts Vietnamese variants and advances only for correct input", async ({ page }) => {
-  await page.goto("/");
+  await page.goto(HUE_JOURNEY_PATH);
   const input = page.locator("#journey-typing-input");
 
   await input.fill("x");
@@ -48,7 +73,7 @@ test("accepts Vietnamese variants and advances only for correct input", async ({
 });
 
 test("plays through all five Hue places and creates GameResult", async ({ page }) => {
-  await page.goto("/");
+  await page.goto(HUE_JOURNEY_PATH);
   const input = page.locator("#journey-typing-input");
   const answers = [
     "dai noi hue",
@@ -80,7 +105,7 @@ test("plays through all five Hue places and creates GameResult", async ({ page }
 });
 
 test("keeps typing and map controls usable at each viewport", async ({ page }) => {
-  await page.goto("/");
+  await page.goto(HUE_JOURNEY_PATH);
 
   const mapState = await waitForMapRenderer(page);
   if (mapState.mapRenderer === "mapbox") {
@@ -100,7 +125,7 @@ test("keeps typing and map controls usable at each viewport", async ({ page }) =
 });
 
 test("moves the motorbike smoothly and lets the Mapbox camera follow", async ({ page }) => {
-  await page.goto("/");
+  await page.goto(HUE_JOURNEY_PATH);
   const before = await waitForMapRenderer(page);
 
   if (before.mapRenderer !== "mapbox") {
@@ -109,20 +134,25 @@ test("moves the motorbike smoothly and lets the Mapbox camera follow", async ({ 
   }
 
   await expect(page.locator(".mapbox-journey-motorbike")).toBeVisible();
+  const reducedMotion = await page.evaluate(() =>
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+  );
   await page.locator("#journey-typing-input").fill("d");
 
-  await page.waitForFunction(() => {
-    const state = JSON.parse(window.render_game_to_text?.() ?? "{}");
-    return (
-      state.targetMapProgress > 0 &&
-      state.mapProgress > 0 &&
-      state.mapProgress < state.targetMapProgress
-    );
-  });
+  if (!reducedMotion) {
+    await page.waitForFunction(() => {
+      const state = JSON.parse(window.render_game_to_text?.() ?? "{}");
+      return (
+        state.targetMapProgress > 0 &&
+        state.mapProgress > 0 &&
+        state.mapProgress < state.targetMapProgress
+      );
+    });
 
-  const moving = await readState(page);
-  expect(moving.mapProgress).toBeGreaterThan(0);
-  expect(moving.mapProgress).toBeLessThan(moving.targetMapProgress);
+    const moving = await readState(page);
+    expect(moving.mapProgress).toBeGreaterThan(0);
+    expect(moving.mapProgress).toBeLessThan(moving.targetMapProgress);
+  }
 
   await page.waitForFunction(() => {
     const state = JSON.parse(window.render_game_to_text?.() ?? "{}");
@@ -137,7 +167,7 @@ test("moves the motorbike smoothly and lets the Mapbox camera follow", async ({ 
 });
 
 test("zooms, pans and restores the complete Vietnam view", async ({ page }) => {
-  await page.goto("/");
+  await page.goto(HUE_JOURNEY_PATH);
   const rendererState = await waitForMapRenderer(page);
 
   if (rendererState.mapRenderer === "mapbox") {

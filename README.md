@@ -51,6 +51,8 @@ npx playwright install chromium
 src/App.tsx       Giao diện gốc
 src/main.tsx      Điểm khởi động React
 src/index.css     Tailwind và design tokens
+src/journey/      Model hành trình dùng chung và factory tạo game config
+src/data/         Dữ liệu bản đồ, route và nội dung từng tỉnh
 src/test/         Thiết lập unit test
 tests/e2e/        Playwright tests
 public/maps/      Bản đồ và đường SVG
@@ -85,6 +87,25 @@ VITE_MAPBOX_ACCESS_TOKEN=pk.your_public_mapbox_token
 Khởi động lại `npm run dev` sau khi đổi biến môi trường. Nên giới hạn token theo domain trong Mapbox Console. Nếu token chưa được cấu hình, Mapbox hoặc WebGL không tải được, ứng dụng tự động dùng bản đồ SVG hiện tại; game typing vẫn hoạt động bình thường.
 
 `src/components/MapboxJourneyMap.tsx` chỉ phụ trách render Mapbox. State, progress và luật chơi vẫn nằm trong game engine TypeScript thuần.
+
+## Model hành trình theo tỉnh
+
+UI và game engine nhận một `ProvinceJourney` thay vì import trực tiếp dữ liệu Huế. Mỗi hành trình đóng gói metadata của tỉnh, route, các điểm dừng và nội dung địa điểm:
+
+```ts
+type ProvinceJourney = {
+  id: string;
+  slug: string;
+  name: string;
+  shortName: string;
+  description: string;
+  center: [number, number];
+  route: JourneyRoute;
+  places: readonly TourismPlace[];
+};
+```
+
+`createGameConfig(journey)` tại `src/journey/model.ts` chuyển dữ liệu này thành cấu hình cho typing reducer. `VietnamJourneyMap` và `MapboxJourneyMap` đều nhận journey/route qua props, vì vậy thêm tỉnh mới không cần sửa luật chơi hoặc component bản đồ.
 
 ## Điều khiển bản đồ
 

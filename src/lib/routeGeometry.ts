@@ -1,4 +1,4 @@
-import type { RoutePoint } from "../data/centralRoute";
+import type { RoutePoint } from "../journey/types";
 
 export type RoutePosition = RoutePoint & {
   angle: number;
@@ -72,4 +72,3 @@ export function getPointAtProgress(
     segmentIndex,
   };
 }
-
