@@ -12,13 +12,13 @@ import {
   useState,
 } from "react";
 
-import { centralGameJourney } from "../data/centralGameJourney";
-import { centralRoute, vietnamMapGeometry } from "../data/centralRoute";
-import { huePlaceById } from "../data/hueProvince";
+import { vietnamMapGeometry } from "../data/vietnamMap";
 import { getGameMetrics } from "../game/metrics";
 import { normalizeVietnameseAnswer } from "../game/normalize";
 import { createInitialGameState, gameReducer } from "../game/reducer";
 import type { GameState } from "../game/types";
+import { createGameConfig, createPlaceIndex } from "../journey/model";
+import type { ProvinceJourney } from "../journey/types";
 import {
   createInitialViewport,
   MAX_MAP_ZOOM,
@@ -41,10 +41,6 @@ const MapboxJourneyMap = lazy(async () => {
   return { default: module.MapboxJourneyMap };
 });
 
-const routePointString = centralRoute.points
-  .map(({ x, y }) => `${x},${y}`)
-  .join(" ");
-const initialVehicle = getPointAtProgress(centralRoute.points, 0);
 const mapViewBox = `0 0 ${vietnamMapGeometry.viewBox.width} ${vietnamMapGeometry.viewBox.height}`;
 const mapSize = vietnamMapGeometry.viewBox;
 const initialViewport = createInitialViewport(mapSize);
@@ -54,9 +50,6 @@ const hasMapboxAccessToken = Boolean(
   mapboxAccessToken?.startsWith("pk.") &&
     !mapboxAccessToken.includes("replace_with_your"),
 );
-const stopMapProgressValues = centralRoute.stops.map((stop) =>
-  getProgressAtPointIndex(centralRoute.points, stop.pointIndex),
-);
 
 const formatDuration = (elapsedMs: number) => {
   const totalSeconds = Math.floor(elapsedMs / 1_000);
@@ -65,7 +58,10 @@ const formatDuration = (elapsedMs: number) => {
   return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
 };
 
-function getMapProgressForGame(state: GameState) {
+function getMapProgressForGame(
+  state: GameState,
+  stopMapProgressValues: readonly number[],
+) {
   if (state.status === "completed") return 1;
   const stop = state.stops[state.currentStopIndex];
   if (!stop) return 0;
@@ -115,10 +111,46 @@ function PromptCharacters({
   );
 }
 
-export function VietnamJourneyMap() {
+type VietnamJourneyMapProps = {
+  journey: ProvinceJourney;
+  onExit?: () => void;
+};
+
+export function VietnamJourneyMap({
+  journey,
+  onExit,
+}: VietnamJourneyMapProps) {
+  return (
+    <JourneyGameSession
+      key={journey.id}
+      journey={journey}
+      onExit={onExit}
+    />
+  );
+}
+
+function JourneyGameSession({ journey, onExit }: VietnamJourneyMapProps) {
+  const route = journey.route;
+  const gameConfig = useMemo(() => createGameConfig(journey), [journey]);
+  const placeById = useMemo(() => createPlaceIndex(journey), [journey]);
+  const routePointString = useMemo(
+    () => route.points.map(({ x, y }) => `${x},${y}`).join(" "),
+    [route],
+  );
+  const initialVehicle = useMemo(
+    () => getPointAtProgress(route.points, 0),
+    [route],
+  );
+  const stopMapProgressValues = useMemo(
+    () =>
+      route.stops.map((stop) =>
+        getProgressAtPointIndex(route.points, stop.pointIndex),
+      ),
+    [route],
+  );
   const [gameState, dispatch] = useReducer(
     gameReducer,
-    centralGameJourney,
+    gameConfig,
     createInitialGameState,
   );
   const gameStateRef = useRef(gameState);
@@ -147,7 +179,10 @@ export function VietnamJourneyMap() {
   } | null>(null);
 
   const metrics = useMemo(() => getGameMetrics(gameState), [gameState]);
-  const mapProgress = getMapProgressForGame(gameState);
+  const mapProgress = getMapProgressForGame(
+    gameState,
+    stopMapProgressValues,
+  );
   const currentStop = gameState.stops[gameState.currentStopIndex];
   const nextStop = gameState.stops[gameState.currentStopIndex + 1];
   const lastVisitedIndex =
@@ -157,7 +192,7 @@ export function VietnamJourneyMap() {
   const lastVisitedStop =
     lastVisitedIndex >= 0 ? gameState.stops[lastVisitedIndex] : undefined;
   const lastVisitedPlace = lastVisitedStop
-    ? huePlaceById.get(lastVisitedStop.id)
+    ? placeById.get(lastVisitedStop.id)
     : undefined;
 
   useEffect(() => {
@@ -166,14 +201,14 @@ export function VietnamJourneyMap() {
 
   const markerStates = useMemo(
     () =>
-      centralRoute.stops.map((_, index) => {
+      route.stops.map((_, index) => {
         if (gameState.status === "completed" || index < gameState.currentStopIndex) {
           return "completed";
         }
         if (index === gameState.currentStopIndex) return "current";
         return "upcoming";
       }),
-    [gameState.currentStopIndex, gameState.status],
+    [gameState.currentStopIndex, gameState.status, route.stops],
   );
 
   const updateMapViewport = useCallback((nextViewport: MapViewport) => {
@@ -218,7 +253,7 @@ export function VietnamJourneyMap() {
   const updateMapProgress = useCallback(
     (nextProgress: number, publishVisualProgress = true) => {
       const progress = Math.min(1, Math.max(0, nextProgress));
-      const vehicle = getPointAtProgress(centralRoute.points, progress);
+      const vehicle = getPointAtProgress(route.points, progress);
       if (publishVisualProgress) {
         visualProgressRef.current = progress;
       }
@@ -234,7 +269,7 @@ export function VietnamJourneyMap() {
         coordinateOutputRef.current.textContent = `x ${vehicle.x.toFixed(1)}  y ${vehicle.y.toFixed(1)}  góc ${vehicle.angle.toFixed(0)}°`;
       }
     },
-    [],
+    [route.points],
   );
 
   const handleMapboxVisualProgress = useCallback((progress: number) => {
@@ -287,13 +322,16 @@ export function VietnamJourneyMap() {
       const state = gameStateRef.current;
       const liveMetrics = getGameMetrics(state);
       const liveMapProgress = visualProgressRef.current;
-      const vehicle = getPointAtProgress(centralRoute.points, liveMapProgress);
+      const vehicle = getPointAtProgress(route.points, liveMapProgress);
       const geoVehicle = getGeoRoutePosition(
-        centralRoute.points,
-        centralRoute.geoPoints,
+        route.points,
+        route.geoPoints,
         liveMapProgress,
       );
-      const targetMapProgress = getMapProgressForGame(state);
+      const targetMapProgress = getMapProgressForGame(
+        state,
+        stopMapProgressValues,
+      );
       const usesMapbox = mapRenderer === "mapbox";
 
       return JSON.stringify({
@@ -315,7 +353,13 @@ export function VietnamJourneyMap() {
           width: Number(viewportRef.current.width.toFixed(2)),
           height: Number(viewportRef.current.height.toFixed(2)),
         },
-        route: centralRoute.name,
+        journey: {
+          id: journey.id,
+          slug: journey.slug,
+          name: journey.name,
+          province: journey.shortName,
+        },
+        route: route.name,
         progress: Number(liveMetrics.progress.toFixed(4)),
         mapProgress: Number(liveMapProgress.toFixed(4)),
         targetMapProgress: Number(targetMapProgress.toFixed(4)),
@@ -398,7 +442,15 @@ export function VietnamJourneyMap() {
       delete window.typeJourneyText;
       delete window.resetJourneyGame;
     };
-  }, [mapRenderer, resetMapView, setMapZoom, updateMapProgress]);
+  }, [
+    journey,
+    mapRenderer,
+    resetMapView,
+    route,
+    setMapZoom,
+    stopMapProgressValues,
+    updateMapProgress,
+  ]);
 
   useEffect(() => {
     const toggleFullscreen = (event: KeyboardEvent) => {
@@ -477,7 +529,7 @@ export function VietnamJourneyMap() {
 
   const feedbackText =
     gameState.status === "completed"
-      ? "Bạn đã tham quan đủ năm điểm của hành trình Huế."
+      ? `Bạn đã tham quan đủ ${journey.places.length} điểm của hành trình ${journey.shortName}.`
       : gameState.status === "paused"
         ? "Hành trình đang tạm dừng."
         : gameState.feedback === "incorrect"
@@ -491,11 +543,24 @@ export function VietnamJourneyMap() {
   return (
     <main className="min-h-[100dvh] px-4 py-5 sm:px-6 lg:px-8 lg:py-7">
       <header className="mx-auto flex max-w-[1400px] items-end justify-between gap-5 pb-5 lg:pb-6">
-        <div>
+        <div className="flex items-end gap-4">
+          {onExit ? (
+            <button
+              id="back-to-province-map"
+              type="button"
+              className="journey-back-button"
+              aria-label="Trở về bản đồ hành trình"
+              onClick={onExit}
+            >
+              <span aria-hidden="true">←</span>
+            </button>
+          ) : null}
+          <div>
           <p className="font-mono text-[0.7rem] font-semibold uppercase tracking-[0.16em] text-accent">Gõ Xuyên Việt</p>
-          <h1 className="mt-2 text-2xl font-extrabold tracking-[-0.035em] text-foreground sm:text-3xl">Tỉnh thí điểm: Huế</h1>
+          <h1 className="mt-2 text-2xl font-extrabold tracking-[-0.035em] text-foreground sm:text-3xl">Tỉnh thí điểm: {journey.shortName}</h1>
+          </div>
         </div>
-        <p className="hidden max-w-[34ch] text-right text-sm leading-6 text-muted md:block">Gõ tên từng điểm đến để khám phá một vòng di sản Huế.</p>
+        <p className="hidden max-w-[42ch] text-right text-sm leading-6 text-muted md:block">{journey.description}</p>
       </header>
 
       <div className="mx-auto grid max-w-[1400px] gap-4 lg:grid-cols-[minmax(0,1.62fr)_minmax(20rem,0.78fr)] lg:gap-5">
@@ -520,8 +585,8 @@ export function VietnamJourneyMap() {
             onPointerCancel={endMapDrag}
             onKeyDown={handleMapKeyDown}
           >
-            <title id="map-title">Bản đồ hành trình di sản Huế</title>
-            <desc id="map-description">Năm điểm tham quan thử nghiệm tại Huế. Xe tiến lên theo số ký tự người chơi gõ đúng.</desc>
+            <title id="map-title">Bản đồ {journey.name}</title>
+            <desc id="map-description">{journey.places.length} điểm tham quan tại {journey.shortName}. Xe tiến lên theo số ký tự người chơi gõ đúng.</desc>
             <defs>
               <linearGradient id="land-wash" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stopColor="var(--map-land-top)" /><stop offset="1" stopColor="var(--map-land-bottom)" /></linearGradient>
               <filter id="land-shadow" x="-30%" y="-20%" width="160%" height="160%"><feDropShadow dx="0" dy="8" stdDeviation="10" floodColor="var(--map-shadow)" floodOpacity="0.22" /></filter>
@@ -533,8 +598,8 @@ export function VietnamJourneyMap() {
             </g>
             <polyline className="journey-route-base" points={routePointString} fill="none" />
             <polyline ref={traveledRouteRef} className="journey-route-traveled" points={routePointString} pathLength="1" strokeDasharray="1" strokeDashoffset="1" fill="none" />
-            {centralRoute.stops.map((stop, index) => {
-              const point = centralRoute.points[stop.pointIndex];
+            {route.stops.map((stop, index) => {
+              const point = route.points[stop.pointIndex];
               const lineEndX = stop.label.anchor === "end" ? stop.label.x + 8 : stop.label.x - 8;
               return <g key={stop.id} data-stop-id={stop.id} data-state={markerStates[index]}><line className="stop-leader" x1={point.x} y1={point.y} x2={lineEndX} y2={stop.label.y - 4} /><g className="stop-marker" transform={`translate(${point.x} ${point.y})`}><circle className="stop-marker-ring" r="7.5" /><circle className="stop-marker-core" r="2.75" /></g><text className="stop-label" x={stop.label.x} y={stop.label.y} textAnchor={stop.label.anchor}>{stop.name}</text></g>;
             })}
@@ -545,6 +610,7 @@ export function VietnamJourneyMap() {
             <Suspense fallback={null}>
               <MapboxJourneyMap
                 accessToken={mapboxAccessToken!}
+                route={route}
                 progress={mapProgress}
                 stopStates={markerStates}
                 onVisualProgressChange={handleMapboxVisualProgress}
@@ -556,14 +622,14 @@ export function VietnamJourneyMap() {
           ) : null}
 
           {mapRenderer !== "mapbox" ? <div className="map-zoom-panel"><div className="map-zoom-controls" role="group" aria-label="Điều khiển thu phóng bản đồ"><button ref={zoomOutRef} id="map-zoom-out" type="button" aria-label="Thu nhỏ bản đồ" title="Thu nhỏ bản đồ" disabled onClick={() => setMapZoom(viewportRef.current.zoom / ZOOM_STEP)}>−</button><button id="map-zoom-reset" type="button" aria-label="Hiển thị toàn bộ Việt Nam" title="Hiển thị toàn bộ Việt Nam" onClick={resetMapView}><output ref={zoomOutputRef} aria-live="polite">1×</output></button><button ref={zoomInRef} id="map-zoom-in" type="button" aria-label="Phóng to bản đồ" title="Phóng to bản đồ" onClick={() => setMapZoom(viewportRef.current.zoom * ZOOM_STEP)}>+</button></div><span id="map-navigation-help" className="map-zoom-hint">Phóng to rồi kéo để xem từng vùng</span></div> : null}
-          <div className="map-legend" aria-hidden="true"><span className="legend-line" /><span>Prototype Huế</span></div>
+          <div className="map-legend" aria-hidden="true"><span className="legend-line" /><span>{journey.shortName}</span></div>
           {mapRenderer !== "mapbox" ? <div className="coordinate-readout"><span>PROGRESS</span><output ref={coordinateOutputRef}>x {initialVehicle.x.toFixed(1)}&nbsp; y {initialVehicle.y.toFixed(1)}&nbsp; góc {initialVehicle.angle.toFixed(0)}°</output></div> : null}
           <figcaption className="sr-only">Xe tiến theo ký tự gõ đúng. Dùng nút thu phóng và kéo để xem bản đồ. Nhấn F để bật hoặc tắt toàn màn hình.</figcaption>
         </figure>
 
         <aside className="control-panel rounded-[var(--radius-panel)] border border-border bg-surface p-5 sm:p-6 lg:flex lg:min-h-[calc(100dvh-8rem)] lg:flex-col lg:p-7">
           <div className="flex items-start justify-between gap-4">
-            <div><h2 className="text-2xl font-extrabold tracking-[-0.03em] text-foreground">{centralRoute.name}</h2><p className="mt-2 text-sm leading-6 text-muted">Điểm {Math.min(gameState.currentStopIndex + 1, gameState.stops.length)} / {gameState.stops.length}</p></div>
+            <div><h2 className="text-2xl font-extrabold tracking-[-0.03em] text-foreground">{journey.name}</h2><p className="mt-2 text-sm leading-6 text-muted">Điểm {Math.min(gameState.currentStopIndex + 1, gameState.stops.length)} / {gameState.stops.length}</p></div>
             <span className="game-status-label" data-game-status={gameState.status}>{gameState.status === "ready" ? "Sẵn sàng" : gameState.status === "playing" ? "Đang đi" : gameState.status === "paused" ? "Tạm dừng" : "Hoàn thành"}</span>
           </div>
 
@@ -575,7 +641,7 @@ export function VietnamJourneyMap() {
 
           <section className="mt-6" aria-labelledby="typing-heading">
             {gameState.status === "completed" ? (
-              <div className="completion-panel" role="status"><p className="text-sm font-bold text-accent">Đã khám phá Huế</p><h3 id="typing-heading" className="mt-2 text-2xl font-extrabold tracking-[-0.03em] text-foreground">Hoàn thành hành trình</h3><p className="mt-2 text-sm leading-6 text-muted">{gameState.result?.correctInputs} ký tự đúng, {gameState.result?.incorrectInputs} lần gõ sai trong {formatDuration(gameState.result?.durationMs ?? 0)}.</p></div>
+              <div className="completion-panel" role="status"><p className="text-sm font-bold text-accent">Đã khám phá {journey.shortName}</p><h3 id="typing-heading" className="mt-2 text-2xl font-extrabold tracking-[-0.03em] text-foreground">Hoàn thành hành trình</h3><p className="mt-2 text-sm leading-6 text-muted">{gameState.result?.correctInputs} ký tự đúng, {gameState.result?.incorrectInputs} lần gõ sai trong {formatDuration(gameState.result?.durationMs ?? 0)}.</p></div>
             ) : (
               <>
                 <p className="text-xs font-bold uppercase tracking-[0.12em] text-muted">Điểm đến hiện tại</p>
@@ -628,7 +694,7 @@ export function VietnamJourneyMap() {
 
           <section aria-labelledby="stops-heading" className="mt-6 lg:mt-auto lg:pt-6">
             <div className="flex items-baseline justify-between gap-4"><h3 id="stops-heading" className="text-sm font-bold text-foreground">Điểm tham quan</h3>{nextStop && gameState.status !== "completed" ? <p className="text-xs text-muted">Tiếp theo: {nextStop.displayName}</p> : null}</div>
-            <ol className="route-board mt-3 grid grid-cols-2 gap-x-4 gap-y-2 p-0 sm:grid-cols-3 lg:grid-cols-2">{centralRoute.stops.map((stop, index) => <li key={stop.id} data-state={markerStates[index]} className="route-board-stop grid grid-cols-[1.7rem_1fr] items-center gap-2"><span className="route-stop-number font-mono text-xs font-bold">{String(index + 1).padStart(2, "0")}</span><span className="text-sm font-semibold">{stop.name}</span></li>)}</ol>
+            <ol className="route-board mt-3 grid grid-cols-2 gap-x-4 gap-y-2 p-0 sm:grid-cols-3 lg:grid-cols-2">{route.stops.map((stop, index) => <li key={stop.id} data-state={markerStates[index]} className="route-board-stop grid grid-cols-[1.7rem_1fr] items-center gap-2"><span className="route-stop-number font-mono text-xs font-bold">{String(index + 1).padStart(2, "0")}</span><span className="text-sm font-semibold">{stop.name}</span></li>)}</ol>
           </section>
         </aside>
       </div>

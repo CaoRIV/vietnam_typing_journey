@@ -1,25 +1,25 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  centralRoutePoints,
-  centralRouteStops,
-  vietnamMapGeometry,
-} from "../data/centralRoute";
+  hueRoutePoints,
+  hueRouteStops,
+} from "../data/hueRoute";
+import { vietnamMapGeometry } from "../data/vietnamMap";
 import { getPointAtProgress, getProgressAtPointIndex } from "./routeGeometry";
 
 describe("route geometry", () => {
   it("clamps the vehicle to the first and last route points", () => {
-    expect(getPointAtProgress(centralRoutePoints, -1)).toMatchObject(
-      centralRoutePoints[0]!,
+    expect(getPointAtProgress(hueRoutePoints, -1)).toMatchObject(
+      hueRoutePoints[0]!,
     );
-    expect(getPointAtProgress(centralRoutePoints, 2)).toMatchObject(
-      centralRoutePoints.at(-1)!,
+    expect(getPointAtProgress(hueRoutePoints, 2)).toMatchObject(
+      hueRoutePoints.at(-1)!,
     );
   });
 
   it("places each stop at an increasing progress after the journey origin", () => {
-    const progressValues = centralRouteStops.map((stop) =>
-      getProgressAtPointIndex(centralRoutePoints, stop.pointIndex),
+    const progressValues = hueRouteStops.map((stop) =>
+      getProgressAtPointIndex(hueRoutePoints, stop.pointIndex),
     );
 
     expect(progressValues[0]).toBeGreaterThan(0);
@@ -32,8 +32,8 @@ describe("route geometry", () => {
     expect(vietnamMapGeometry.path.length).toBeGreaterThan(10_000);
     expect(vietnamMapGeometry.source.license).toBe("Public domain");
 
-    centralRouteStops.forEach((stop) => {
-      const point = centralRoutePoints[stop.pointIndex];
+    hueRouteStops.forEach((stop) => {
+      const point = hueRoutePoints[stop.pointIndex];
       expect(point).toBeDefined();
       expect(stop.coordinates[0]).toBeGreaterThan(102);
       expect(stop.coordinates[0]).toBeLessThan(110);

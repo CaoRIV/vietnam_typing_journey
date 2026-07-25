@@ -1,37 +1,5 @@
-import type { GeoCoordinates } from "./centralRoute";
-
-export type ContentSource = {
-  label: string;
-  url: string;
-};
-
-export type PlaceImage = {
-  src: string;
-  alt: string;
-  author: string;
-  license: string;
-  licenseUrl: string;
-  sourceUrl: string;
-};
-
-export type TourismPlace = {
-  id: string;
-  name: string;
-  acceptedAnswers: readonly string[];
-  coordinates: GeoCoordinates;
-  shortDescription: string;
-  image: PlaceImage;
-  contentSources: readonly ContentSource[];
-};
-
-export type ProvinceJourney = {
-  id: string;
-  name: string;
-  shortName: string;
-  description: string;
-  center: GeoCoordinates;
-  places: readonly TourismPlace[];
-};
+import type { ContentSource, ProvinceJourney } from "../journey/types";
+import { hueRoute } from "./hueRoute";
 
 const unescoHueSources: readonly ContentSource[] = [
   {
@@ -46,11 +14,13 @@ const unescoHueSources: readonly ContentSource[] = [
 
 export const hueProvince: ProvinceJourney = {
   id: "hue-heritage-prototype",
+  slug: "hue",
   name: "Hành trình di sản Huế",
   shortName: "Huế",
   description:
     "Năm điểm dừng thử nghiệm kết nối hoàng thành, chùa cổ, lăng vua và cảnh quan sông Hương.",
   center: [107.568, 16.432],
+  route: hueRoute,
   places: [
     {
       id: "imperial-city-hue",
@@ -164,7 +134,3 @@ export const hueProvince: ProvinceJourney = {
     },
   ],
 };
-
-export const huePlaceById = new Map(
-  hueProvince.places.map((place) => [place.id, place]),
-);

@@ -3,10 +3,10 @@ import * as mapboxgl from "mapbox-gl/esm";
 import type { ExpressionSpecification } from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 
-import {
-  centralRoute,
-  type GeoCoordinates,
-} from "../data/centralRoute";
+import type {
+  GeoCoordinates,
+  JourneyRoute,
+} from "../journey/types";
 import {
   getGeoRoutePosition,
   getTraveledGeoCoordinates,
@@ -22,6 +22,7 @@ export type MapboxCameraState = {
 
 type MapboxJourneyMapProps = {
   accessToken: string;
+  route: JourneyRoute;
   progress: number;
   stopStates: readonly MapStopState[];
   onReady: () => void;
@@ -40,23 +41,10 @@ const hasSetData = (source: unknown): source is MutableGeoJsonSource =>
   "setData" in source &&
   typeof (source as { setData?: unknown }).setData === "function";
 
-const firstRouteCoordinate = centralRoute.geoPoints[0] ?? [108, 16];
 const toLngLat = ([longitude, latitude]: GeoCoordinates): [number, number] => [
   longitude,
   latitude,
 ];
-const initialPosition = getGeoRoutePosition(
-  centralRoute.points,
-  centralRoute.geoPoints,
-  0,
-);
-const routeBounds = centralRoute.geoPoints.reduce(
-  (bounds, coordinates) => bounds.extend(toLngLat(coordinates)),
-  new mapboxgl.LngLatBounds(
-    toLngLat(firstRouteCoordinate),
-    toLngLat(firstRouteCoordinate),
-  ),
-);
 
 const createLineFeature = (coordinates: readonly GeoCoordinates[]) => ({
   type: "Feature" as const,
@@ -70,9 +58,12 @@ const createLineFeature = (coordinates: readonly GeoCoordinates[]) => ({
   },
 });
 
-const createStopCollection = (stopStates: readonly MapStopState[]) => ({
+const createStopCollection = (
+  route: JourneyRoute,
+  stopStates: readonly MapStopState[],
+) => ({
   type: "FeatureCollection" as const,
-  features: centralRoute.stops.map((stop, index) => ({
+  features: route.stops.map((stop, index) => ({
     type: "Feature" as const,
     properties: {
       id: stop.id,
@@ -187,6 +178,7 @@ function createVehicleElement() {
 
 export function MapboxJourneyMap({
   accessToken,
+  route,
   progress,
   stopStates,
   onReady,
@@ -236,6 +228,19 @@ export function MapboxJourneyMap({
 
     let disposed = false;
     try {
+      const firstRouteCoordinate = route.geoPoints[0] ?? [108, 16];
+      const initialPosition = getGeoRoutePosition(
+        route.points,
+        route.geoPoints,
+        0,
+      );
+      const routeBounds = route.geoPoints.reduce(
+        (bounds, coordinates) => bounds.extend(toLngLat(coordinates)),
+        new mapboxgl.LngLatBounds(
+          toLngLat(firstRouteCoordinate),
+          toLngLat(firstRouteCoordinate),
+        ),
+      );
       const map = new mapboxgl.Map({
         accessToken,
         container,
@@ -279,28 +284,28 @@ export function MapboxJourneyMap({
         const currentProgress = progressRef.current;
         displayedProgressRef.current = currentProgress;
         const position = getGeoRoutePosition(
-          centralRoute.points,
-          centralRoute.geoPoints,
+          route.points,
+          route.geoPoints,
           currentProgress,
         );
 
         map.addSource("journey-route", {
           type: "geojson",
-          data: createLineFeature(centralRoute.geoPoints),
+          data: createLineFeature(route.geoPoints),
         });
         map.addSource("journey-traveled-route", {
           type: "geojson",
           data: createLineFeature(
             getTraveledGeoCoordinates(
-              centralRoute.points,
-              centralRoute.geoPoints,
+              route.points,
+              route.geoPoints,
               currentProgress,
             ),
           ),
         });
         map.addSource("journey-stops", {
           type: "geojson",
-          data: createStopCollection(stopStatesRef.current),
+          data: createStopCollection(route, stopStatesRef.current),
         });
 
         map.addLayer({
@@ -400,7 +405,7 @@ export function MapboxJourneyMap({
         error instanceof Error ? error : new Error("Mapbox initialization failed."),
       );
     }
-  }, [accessToken]);
+  }, [accessToken, route]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -425,8 +430,8 @@ export function MapboxJourneyMap({
       targetProgress + CAMERA_LOOK_AHEAD,
     );
     const lookAheadPosition = getGeoRoutePosition(
-      centralRoute.points,
-      centralRoute.geoPoints,
+      route.points,
+      route.geoPoints,
       lookAheadProgress,
     );
     map.easeTo({
@@ -443,8 +448,8 @@ export function MapboxJourneyMap({
       const visualProgress =
         startProgress + (targetProgress - startProgress) * easedProgress;
       const position = getGeoRoutePosition(
-        centralRoute.points,
-        centralRoute.geoPoints,
+        route.points,
+        route.geoPoints,
         visualProgress,
       );
       const traveledSource = map.getSource("journey-traveled-route");
@@ -452,8 +457,8 @@ export function MapboxJourneyMap({
         traveledSource.setData(
           createLineFeature(
             getTraveledGeoCoordinates(
-              centralRoute.points,
-              centralRoute.geoPoints,
+              route.points,
+              route.geoPoints,
               visualProgress,
             ),
           ),
@@ -480,16 +485,16 @@ export function MapboxJourneyMap({
         animationFrameRef.current = null;
       }
     };
-  }, [progress]);
+  }, [progress, route]);
 
   useEffect(() => {
     const map = mapRef.current;
     if (!map?.isStyleLoaded()) return;
     const stopSource = map.getSource("journey-stops");
     if (hasSetData(stopSource)) {
-      stopSource.setData(createStopCollection(stopStates));
+      stopSource.setData(createStopCollection(route, stopStates));
     }
-  }, [stopStates]);
+  }, [route, stopStates]);
 
   return (
     <div
@@ -497,7 +502,7 @@ export function MapboxJourneyMap({
       id="journey-mapbox-map"
       className="mapbox-map absolute inset-0 z-[1]"
       role="region"
-      aria-label="Bản đồ tương tác Mapbox của hành trình di sản Huế"
+      aria-label={`Bản đồ tương tác Mapbox của ${route.name}`}
     />
   );
 }

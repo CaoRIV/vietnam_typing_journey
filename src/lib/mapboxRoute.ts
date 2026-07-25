@@ -1,4 +1,4 @@
-import type { GeoCoordinates, RoutePoint } from "../data/centralRoute";
+import type { GeoCoordinates, RoutePoint } from "../journey/types";
 import { getRouteMetrics } from "./routeGeometry";
 
 export type GeoRoutePosition = {
