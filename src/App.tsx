@@ -3,6 +3,12 @@ import { useCallback, useEffect, useState } from "react";
 import { VietnamJourneyMap } from "./components/VietnamJourneyMap";
 import { VietnamJourneySelector } from "./components/VietnamJourneySelector";
 import { availableJourneys, journeyBySlug } from "./data/journeys";
+import {
+  loadJourneyProgress,
+  mergeJourneyProgress,
+  saveJourneyProgress,
+  type JourneyProgressUpdate,
+} from "./journey/progress";
 
 const MAP_PATH = "/ban-do";
 
@@ -13,6 +19,7 @@ const getJourneySlug = (pathname: string) => {
 
 export default function App() {
   const [pathname, setPathname] = useState(() => window.location.pathname);
+  const [progress, setProgress] = useState(loadJourneyProgress);
 
   useEffect(() => {
     const handlePopState = () => setPathname(window.location.pathname);
@@ -29,6 +36,17 @@ export default function App() {
     document.body.scrollTop = 0;
   }, []);
 
+  const handleProgressChange = useCallback(
+    (update: JourneyProgressUpdate) => {
+      setProgress((current) => {
+        const next = mergeJourneyProgress(current, update);
+        if (next !== current) saveJourneyProgress(next);
+        return next;
+      });
+    },
+    [],
+  );
+
   const journeySlug = getJourneySlug(pathname);
   const journey = journeySlug ? journeyBySlug.get(journeySlug) : undefined;
 
@@ -37,6 +55,7 @@ export default function App() {
       <VietnamJourneyMap
         journey={journey}
         onExit={() => navigate(MAP_PATH)}
+        onProgressChange={handleProgressChange}
       />
     );
   }
@@ -44,6 +63,7 @@ export default function App() {
   return (
     <VietnamJourneySelector
       journeys={availableJourneys}
+      progress={progress}
       onOpenJourney={(slug) => navigate(`/hanh-trinh/${slug}`)}
     />
   );

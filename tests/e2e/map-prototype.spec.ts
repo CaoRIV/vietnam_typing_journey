@@ -22,7 +22,17 @@ test("opens Hue from the national selector and supports browser navigation", asy
     totalProvinces: 34,
   });
   expect(selectorState.availableJourneys).toHaveLength(1);
+  expect(selectorState.mapProvinces).toHaveLength(34);
+  await expect(page.locator(".selector-province-shape")).toHaveCount(34);
 
+  await page.locator('[data-province-hit-code="48"]').click();
+  await expect(page.getByRole("heading", { name: "Hành trình Đà Nẵng" })).toBeVisible();
+  expect((await readState(page)).selectedProvince).toMatchObject({
+    code: "48",
+    status: "coming-soon",
+  });
+
+  await page.locator('[data-province-hit-code="46"]').click();
   await page.locator("#open-hue-journey").click();
   await expect(page).toHaveURL(/\/hanh-trinh\/hue$/);
   await expect(page.locator("#journey-typing-input")).toBeVisible();
@@ -102,6 +112,20 @@ test("plays through all five Hue places and creates GameResult", async ({ page }
     totalCharacters: 55,
   });
   expect(state.result.stopSplits).toHaveLength(5);
+
+  await page.locator("#back-to-province-map").click();
+  await expect(page.locator('[data-province-code="46"]')).toHaveAttribute(
+    "data-status",
+    "completed",
+  );
+  await page.reload();
+  await expect(page.locator('[data-province-code="46"]')).toHaveAttribute(
+    "data-status",
+    "completed",
+  );
+  expect((await readState(page)).completedJourneys).toEqual([
+    "hue-heritage-prototype",
+  ]);
 });
 
 test("keeps typing and map controls usable at each viewport", async ({ page }) => {

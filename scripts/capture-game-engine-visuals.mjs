@@ -12,12 +12,21 @@ const scenarios = [
     viewport: { width: 1280, height: 720 },
     colorScheme: "light",
     selector: true,
+    selectedProvinceCode: "48",
   },
   {
     name: "mobile-province-selector",
     viewport: { width: 390, height: 844 },
     colorScheme: "light",
     selector: true,
+    selectedProvinceCode: "48",
+  },
+  {
+    name: "desktop-persisted-selector",
+    viewport: { width: 1280, height: 720 },
+    colorScheme: "light",
+    selector: true,
+    persistedCompletion: true,
   },
   {
     name: "desktop-playing",
@@ -75,6 +84,25 @@ for (const scenario of scenarios) {
   await page.waitForFunction(() => typeof window.render_game_to_text === "function");
 
   if (scenario.selector) {
+    if (scenario.persistedCompletion) {
+      await page.locator('[data-province-hit-code="46"]').click();
+      await page.locator("#open-hue-journey").click();
+      for (const answer of answers) {
+        await page.locator("#journey-typing-input").fill(answer);
+        await page.evaluate(() => window.advanceTime?.(1_000));
+      }
+      await page.locator("#back-to-province-map").click();
+      await page.reload({ waitUntil: "domcontentloaded" });
+      await page.waitForFunction(
+        () => typeof window.render_game_to_text === "function",
+      );
+    } else if (scenario.selectedProvinceCode) {
+      await page
+        .locator(
+          `[data-province-hit-code="${scenario.selectedProvinceCode}"]`,
+        )
+        .click();
+    }
     await page.screenshot({
       path: path.join(outputDir, `${scenario.name}.png`),
       fullPage: true,

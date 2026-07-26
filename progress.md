@@ -74,3 +74,18 @@ Original prompt: làm phần 2: Làm prototype bản đồ. Vẽ bản đồ Vi�
 ## TODO tiếp theo
 
 - Khi tích hợp Directions API, thay polyline tĩnh bằng GeoJSON đường xe chạy thực tế; animation và camera hiện tại có thể tái sử dụng trực tiếp.
+
+## 2026-07-26 — Hoàn thiện phần 2 cho 34 tỉnh, thành phố
+
+- Đã thay hình bao Việt Nam trên màn chọn hành trình bằng 34 ranh giới tỉnh/thành WGS84 hiện hành, mỗi tỉnh là một SVG path riêng có thể click và điều khiển bằng bàn phím.
+- Nguồn GIS là Vietnamese Provinces Database (MIT), dẫn xuất từ Bản đồ tham chiếu các đơn vị hành chính Việt Nam; script `scripts/generate-province-geometry.mjs` tải, chiếu Mercator, làm gọn và sinh tệp TypeScript khoảng 64 KB.
+- Bản đồ tô màu ba trạng thái `coming-soon`, `available`, `completed`; tìm kiếm/lọc vùng làm mờ các tỉnh không khớp và vùng chạm tại tâm tỉnh giúp thao tác các tỉnh nhỏ trên mobile.
+- Danh mục và bản đồ dùng chung tỉnh đang chọn. Huế có nút bắt đầu/đi lại; 33 tỉnh còn lại hiển thị rõ trạng thái sắp mở thay vì nút vô hiệu không có phản hồi.
+- Tiến độ được lưu tại `go-xuyen-viet.progress.v1` trong localStorage, gồm địa điểm đã ghé, thời điểm hoàn thành và kết quả tốt nhất. Reset/chơi lại không xóa thành tích đã lưu.
+- `render_game_to_text` của màn chọn nay có đủ 34 trạng thái polygon, tỉnh đang chọn, bộ lọc, số điểm đã ghé và hành trình đã hoàn thành.
+- Kiểm tra cuối: lint, typecheck, 32 unit/component test và production build đạt. Web-game client chính thức xác nhận chọn Đà Nẵng; harness Playwright xác nhận desktop/mobile, hoàn thành Huế rồi reload vẫn còn trạng thái, không có console error.
+
+## TODO tiếp theo
+
+- Biên tập dữ liệu địa điểm/tuyến cho các tỉnh tiếp theo và thêm `journeySlug` vào catalog khi đủ nội dung kiểm duyệt.
+- Khi Directions API được nối vào từng hành trình, giữ cơ chế progress hiện tại và thay phần hình học tuyến tĩnh bằng tuyến xe chạy thực tế.

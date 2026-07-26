@@ -18,6 +18,7 @@ import { normalizeVietnameseAnswer } from "../game/normalize";
 import { createInitialGameState, gameReducer } from "../game/reducer";
 import type { GameState } from "../game/types";
 import { createGameConfig, createPlaceIndex } from "../journey/model";
+import type { JourneyProgressUpdate } from "../journey/progress";
 import type { ProvinceJourney } from "../journey/types";
 import {
   createInitialViewport,
@@ -114,22 +115,29 @@ function PromptCharacters({
 type VietnamJourneyMapProps = {
   journey: ProvinceJourney;
   onExit?: () => void;
+  onProgressChange?: (update: JourneyProgressUpdate) => void;
 };
 
 export function VietnamJourneyMap({
   journey,
   onExit,
+  onProgressChange,
 }: VietnamJourneyMapProps) {
   return (
     <JourneyGameSession
       key={journey.id}
       journey={journey}
       onExit={onExit}
+      onProgressChange={onProgressChange}
     />
   );
 }
 
-function JourneyGameSession({ journey, onExit }: VietnamJourneyMapProps) {
+function JourneyGameSession({
+  journey,
+  onExit,
+  onProgressChange,
+}: VietnamJourneyMapProps) {
   const route = journey.route;
   const gameConfig = useMemo(() => createGameConfig(journey), [journey]);
   const placeById = useMemo(() => createPlaceIndex(journey), [journey]);
@@ -198,6 +206,30 @@ function JourneyGameSession({ journey, onExit }: VietnamJourneyMapProps) {
   useEffect(() => {
     gameStateRef.current = gameState;
   }, [gameState]);
+
+  useEffect(() => {
+    const visitedPlaceIds = gameState.stops
+      .filter(
+        (_, index) =>
+          gameState.status === "completed" ||
+          index < gameState.currentStopIndex,
+      )
+      .map((stop) => stop.id);
+
+    onProgressChange?.({
+      journeyId: journey.id,
+      visitedPlaceIds,
+      completed: gameState.status === "completed",
+      result: gameState.result,
+    });
+  }, [
+    gameState.currentStopIndex,
+    gameState.result,
+    gameState.status,
+    gameState.stops,
+    journey.id,
+    onProgressChange,
+  ]);
 
   const markerStates = useMemo(
     () =>

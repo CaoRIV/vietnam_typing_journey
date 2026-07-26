@@ -1,17 +1,21 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import {
   provinceCatalog,
   provinceRegions,
+  type ProvinceCatalogEntry,
   type ProvinceRegion,
 } from "../data/provinceCatalog";
-import { vietnamMapGeometry } from "../data/vietnamMap";
+import { provinceGeometry } from "../data/provinceGeometry.generated";
+import type { JourneyProgress } from "../journey/progress";
 import type { ProvinceJourney } from "../journey/types";
 
 type RegionFilter = "all" | ProvinceRegion;
+type ProvinceStatus = "coming-soon" | "available" | "completed";
 
 type VietnamJourneySelectorProps = {
   journeys: readonly ProvinceJourney[];
+  progress: JourneyProgress;
   onOpenJourney: (slug: string) => void;
 };
 
@@ -19,18 +23,49 @@ const normalizeSearch = (value: string) =>
   value
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
-    .replace(/đ/g, "d")
+    .replace(/[đĐ]/g, "d")
     .toLowerCase();
+
+const statusLabel: Record<ProvinceStatus, string> = {
+  "coming-soon": "Sắp mở",
+  available: "Đang mở",
+  completed: "Đã hoàn thành",
+};
 
 export function VietnamJourneySelector({
   journeys,
+  progress,
   onOpenJourney,
 }: VietnamJourneySelectorProps) {
   const [query, setQuery] = useState("");
   const [region, setRegion] = useState<RegionFilter>("all");
-  const availableSlugs = useMemo(
-    () => new Set(journeys.map((journey) => journey.slug)),
+  const [selectedProvinceCode, setSelectedProvinceCode] = useState("46");
+  const journeyBySlug = useMemo(
+    () => new Map(journeys.map((journey) => [journey.slug, journey])),
     [journeys],
+  );
+  const provinceByCode = useMemo(
+    () => new Map(provinceCatalog.map((province) => [province.code, province])),
+    [],
+  );
+  const completedJourneyIds = useMemo(
+    () =>
+      new Set(
+        Object.entries(progress.journeys)
+          .filter(([, entry]) => Boolean(entry.completedAt))
+          .map(([journeyId]) => journeyId),
+      ),
+    [progress],
+  );
+  const getProvinceStatus = useCallback(
+    (province: ProvinceCatalogEntry): ProvinceStatus => {
+      const journey = province.journeySlug
+        ? journeyBySlug.get(province.journeySlug)
+        : undefined;
+      if (!journey) return "coming-soon";
+      return completedJourneyIds.has(journey.id) ? "completed" : "available";
+    },
+    [completedJourneyIds, journeyBySlug],
   );
   const filteredProvinces = useMemo(() => {
     const normalizedQuery = normalizeSearch(query.trim());
@@ -41,46 +76,59 @@ export function VietnamJourneySelector({
           normalizeSearch(province.name).includes(normalizedQuery)),
     );
   }, [query, region]);
-  const activeJourney = journeys[0];
-  const activeStops = activeJourney?.route.stops ?? [];
-  const markerPoint = activeStops.length
-    ? activeStops
-        .map((stop) => activeJourney.route.points[stop.pointIndex])
-        .reduce(
-          (total, point) => ({ x: total.x + point.x, y: total.y + point.y }),
-          { x: 0, y: 0 },
-        )
-    : null;
-  const marker =
-    markerPoint && activeStops.length
-      ? {
-          x: markerPoint.x / activeStops.length,
-          y: markerPoint.y / activeStops.length,
-        }
-      : null;
+  const visibleProvinceCodes = useMemo(
+    () => new Set(filteredProvinces.map((province) => province.code)),
+    [filteredProvinces],
+  );
+  const selectedProvince =
+    provinceByCode.get(selectedProvinceCode) ?? provinceCatalog[0];
+  const selectedJourney = selectedProvince.journeySlug
+    ? journeyBySlug.get(selectedProvince.journeySlug)
+    : undefined;
+  const selectedStatus = getProvinceStatus(selectedProvince);
+  const selectedGeometry = provinceGeometry.provinces.find(
+    (province) => province.code === selectedProvince.code,
+  );
 
   useEffect(() => {
     const renderSelectorToText = () =>
       JSON.stringify({
         mode: "province-select",
         route: "/ban-do",
+        coordinateSystem:
+          "Projected WGS84 province boundaries in SVG viewBox 0 0 600 1000; origin top-left; x right; y down",
         totalProvinces: provinceCatalog.length,
+        completedJourneys: [...completedJourneyIds],
+        selectedProvince: {
+          code: selectedProvince.code,
+          name: selectedProvince.name,
+          status: selectedStatus,
+        },
         availableJourneys: journeys.map((journey) => ({
           slug: journey.slug,
           name: journey.name,
           province: journey.shortName,
           places: journey.places.length,
+          visitedPlaces:
+            progress.journeys[journey.id]?.visitedPlaceIds.length ?? 0,
+          completed: completedJourneyIds.has(journey.id),
         })),
         filters: { region, query },
+        mapProvinces: provinceGeometry.provinces.map((geometry) => {
+          const province = provinceByCode.get(geometry.code)!;
+          return {
+            code: province.code,
+            name: province.name,
+            status: getProvinceStatus(province),
+            selected: province.code === selectedProvince.code,
+            visible: visibleProvinceCodes.has(province.code),
+          };
+        }),
         visibleProvinces: filteredProvinces.map((province) => ({
           code: province.code,
           name: province.name,
           region: province.region,
-          status:
-            province.journeySlug &&
-            availableSlugs.has(province.journeySlug)
-              ? "available"
-              : "coming-soon",
+          status: getProvinceStatus(province),
         })),
       });
 
@@ -90,7 +138,20 @@ export function VietnamJourneySelector({
         delete window.render_game_to_text;
       }
     };
-  }, [availableSlugs, filteredProvinces, journeys, query, region]);
+  }, [
+    completedJourneyIds,
+    filteredProvinces,
+    getProvinceStatus,
+    journeyBySlug,
+    journeys,
+    progress,
+    provinceByCode,
+    query,
+    region,
+    selectedProvince,
+    selectedStatus,
+    visibleProvinceCodes,
+  ]);
 
   return (
     <main className="journey-selector min-h-[100dvh] px-4 py-5 sm:px-6 lg:px-8 lg:py-7">
@@ -104,9 +165,11 @@ export function VietnamJourneySelector({
           </h1>
         </div>
         <div className="hidden text-right sm:block">
-          <strong className="font-mono text-2xl text-foreground">01/34</strong>
+          <strong className="font-mono text-2xl text-foreground">
+            {String(journeys.length).padStart(2, "0")}/34
+          </strong>
           <p className="mt-1 text-xs font-semibold uppercase tracking-[0.12em] text-muted">
-            tỉnh thành đã mở
+            tỉnh thành đã mở · {completedJourneyIds.size} hoàn thành
           </p>
         </div>
       </header>
@@ -115,74 +178,138 @@ export function VietnamJourneySelector({
         <section className="selector-map-panel relative min-h-[31rem] overflow-hidden rounded-[var(--radius-panel)] border border-map-border bg-map lg:min-h-[calc(100dvh-8rem)]">
           <div className="selector-map-copy">
             <p className="text-xs font-bold uppercase tracking-[0.14em] text-accent">
-              Bản đồ hành trình
+              Bản đồ 34 tỉnh, thành phố
             </p>
             <h2 className="mt-2 text-2xl font-extrabold tracking-[-0.035em] text-foreground">
               Việt Nam đang mở từng chặng
             </h2>
             <p className="mt-2 max-w-[38ch] text-sm leading-6 text-muted">
-              Bắt đầu tại Huế. Những tỉnh còn lại sẽ được mở khi dữ liệu địa
-              điểm và tuyến đường hoàn tất kiểm duyệt.
+              Chọn trực tiếp một tỉnh trên bản đồ. Huế đã có hành trình; các
+              tỉnh còn lại hiển thị trạng thái chờ nội dung.
             </p>
           </div>
 
           <svg
             className="selector-vietnam-map"
-            viewBox={`0 0 ${vietnamMapGeometry.viewBox.width} ${vietnamMapGeometry.viewBox.height}`}
-            role="img"
-            aria-label="Bản đồ Việt Nam với hành trình Huế đang khả dụng"
+            viewBox={`0 0 ${provinceGeometry.viewBox.width} ${provinceGeometry.viewBox.height}`}
+            role="group"
+            aria-label="Bản đồ tương tác 34 tỉnh, thành phố Việt Nam"
           >
-            <defs>
-              <linearGradient id="selector-land-wash" x1="0" y1="0" x2="1" y2="1">
-                <stop offset="0" stopColor="var(--map-land-top)" />
-                <stop offset="1" stopColor="var(--map-land-bottom)" />
-              </linearGradient>
-            </defs>
-            <path
-              className="selector-vietnam-land"
-              fill="url(#selector-land-wash)"
-              d={vietnamMapGeometry.path}
-            />
-            {marker && activeJourney ? (
+            {provinceGeometry.provinces.map((geometry) => {
+              const province = provinceByCode.get(geometry.code);
+              if (!province) return null;
+              const status = getProvinceStatus(province);
+              const selected = province.code === selectedProvince.code;
+              const visible = visibleProvinceCodes.has(province.code);
+
+              return (
+                <path
+                  key={province.code}
+                  className="selector-province-shape"
+                  d={geometry.path}
+                  fillRule="evenodd"
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`${province.name}: ${statusLabel[status]}`}
+                  aria-pressed={selected}
+                  data-province-code={province.code}
+                  data-status={status}
+                  data-selected={selected}
+                  data-filtered={!visible}
+                  onClick={() => setSelectedProvinceCode(province.code)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      setSelectedProvinceCode(province.code);
+                    }
+                  }}
+                >
+                  <title>
+                    {province.name} · {statusLabel[status]}
+                  </title>
+                </path>
+              );
+            })}
+
+            {provinceGeometry.provinces.map((geometry) => {
+              const province = provinceByCode.get(geometry.code);
+              if (!province) return null;
+              return (
+                <circle
+                  key={`hit-${province.code}`}
+                  className="selector-province-hit-area"
+                  cx={geometry.label.x}
+                  cy={geometry.label.y}
+                  r="9"
+                  data-province-hit-code={province.code}
+                  aria-hidden="true"
+                  onClick={() => setSelectedProvinceCode(province.code)}
+                />
+              );
+            })}
+
+            {selectedGeometry ? (
               <g
-                className="selector-journey-marker"
-                role="link"
-                tabIndex={0}
-                aria-label={`Mở hành trình ${activeJourney.shortName}`}
-                transform={`translate(${marker.x} ${marker.y})`}
-                onClick={() => onOpenJourney(activeJourney.slug)}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter" || event.key === " ") {
-                    event.preventDefault();
-                    onOpenJourney(activeJourney.slug);
-                  }
-                }}
+                className="selector-selected-marker"
+                transform={`translate(${selectedGeometry.label.x} ${selectedGeometry.label.y})`}
+                aria-hidden="true"
               >
-                <circle className="selector-marker-pulse" r="18" />
-                <circle className="selector-marker-ring" r="10" />
-                <circle className="selector-marker-core" r="4" />
-                <text x="16" y="5">Huế · 5 điểm</text>
+                <circle className="selector-marker-pulse" r="17" />
+                <circle className="selector-marker-ring" r="9" />
+                <circle className="selector-marker-core" r="3.5" />
               </g>
             ) : null}
           </svg>
 
-          {activeJourney ? (
-            <article className="selector-featured-journey">
-              <div>
-                <span>Đang mở</span>
-                <h3>{activeJourney.name}</h3>
-                <p>{activeJourney.places.length} điểm tham quan</p>
-              </div>
-              <button
-                id="open-hue-journey"
-                type="button"
-                onClick={() => onOpenJourney(activeJourney.slug)}
-              >
-                Bắt đầu
-                <span aria-hidden="true">→</span>
-              </button>
-            </article>
-          ) : null}
+          <p className="selector-map-source">
+            Ranh giới:{" "}
+            <a
+              href={provinceGeometry.source.url}
+              target="_blank"
+              rel="noreferrer"
+            >
+              {provinceGeometry.source.name}
+            </a>{" "}
+            · {provinceGeometry.source.license}
+          </p>
+
+          <article
+            className="selector-featured-journey"
+            data-status={selectedStatus}
+            aria-live="polite"
+          >
+            <div>
+              <span>{statusLabel[selectedStatus]}</span>
+              <h3>
+                {selectedJourney?.name ??
+                  `Hành trình ${selectedProvince.name}`}
+              </h3>
+              <p>
+                {selectedJourney
+                  ? `${selectedJourney.places.length} điểm tham quan`
+                  : "Đang biên tập địa điểm và tuyến đường"}
+              </p>
+            </div>
+            <button
+              id={
+                selectedJourney?.slug === "hue"
+                  ? "open-hue-journey"
+                  : undefined
+              }
+              type="button"
+              disabled={!selectedJourney}
+              onClick={() =>
+                selectedJourney && onOpenJourney(selectedJourney.slug)
+              }
+            >
+              {selectedStatus === "completed"
+                ? "Đi lại"
+                : selectedJourney
+                  ? "Bắt đầu"
+                  : "Sắp mở"}
+              {selectedJourney ? <span aria-hidden="true">→</span> : null}
+            </button>
+          </article>
         </section>
 
         <aside className="selector-catalog rounded-[var(--radius-panel)] border border-border bg-surface p-5 sm:p-6 lg:flex lg:max-h-[calc(100dvh-8rem)] lg:flex-col">
@@ -191,7 +318,7 @@ export function VietnamJourneySelector({
               34 tỉnh, thành phố
             </h2>
             <p className="mt-2 text-sm leading-6 text-muted">
-              Tìm hành trình theo danh mục hành chính hiện hành.
+              Tìm và chọn theo danh mục hành chính hiện hành.
             </p>
           </div>
 
@@ -206,7 +333,11 @@ export function VietnamJourneySelector({
             />
           </label>
 
-          <div className="selector-region-tabs mt-3" role="group" aria-label="Lọc theo vùng">
+          <div
+            className="selector-region-tabs mt-3"
+            role="group"
+            aria-label="Lọc theo vùng"
+          >
             <button
               type="button"
               data-active={region === "all"}
@@ -228,25 +359,23 @@ export function VietnamJourneySelector({
 
           <div className="selector-province-list mt-4" aria-live="polite">
             {filteredProvinces.map((province) => {
-              const isAvailable = Boolean(
-                province.journeySlug &&
-                  availableSlugs.has(province.journeySlug),
-              );
+              const status = getProvinceStatus(province);
+              const selected = province.code === selectedProvince.code;
               return (
                 <button
                   key={province.code}
                   type="button"
                   className="selector-province-row"
-                  data-available={isAvailable}
-                  disabled={!isAvailable}
-                  onClick={() =>
-                    province.journeySlug &&
-                    onOpenJourney(province.journeySlug)
-                  }
+                  data-status={status}
+                  data-selected={selected}
+                  aria-pressed={selected}
+                  onClick={() => setSelectedProvinceCode(province.code)}
                 >
-                  <span className="selector-province-code">{province.code}</span>
+                  <span className="selector-province-code">
+                    {province.code}
+                  </span>
                   <span>{province.name}</span>
-                  <small>{isAvailable ? "Chơi ngay" : "Sắp mở"}</small>
+                  <small>{statusLabel[status]}</small>
                 </button>
               );
             })}
