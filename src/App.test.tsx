@@ -59,6 +59,7 @@ const demoJourney: ProvinceJourney = {
 
 beforeEach(() => {
   window.history.replaceState({}, "", "/");
+  window.localStorage.clear();
 });
 
 afterEach(() => {
@@ -67,7 +68,7 @@ afterEach(() => {
 
 describe("Hue tourism map prototype", () => {
   it("navigates from the national selector to Hue and back", () => {
-    render(<App />);
+    const { container } = render(<App />);
 
     expect(
       screen.getByRole("heading", { name: "Chọn hành trình" }),
@@ -77,6 +78,9 @@ describe("Hue tourism map prototype", () => {
       mode: "province-select",
       totalProvinces: 34,
     });
+    expect(
+      container.querySelectorAll(".selector-province-shape"),
+    ).toHaveLength(34);
 
     fireEvent.click(screen.getByRole("button", { name: /Bắt đầu/ }));
     expect(window.location.pathname).toBe("/hanh-trinh/hue");
@@ -91,6 +95,65 @@ describe("Hue tourism map prototype", () => {
     expect(
       screen.getByRole("heading", { name: "Chọn hành trình" }),
     ).toBeInTheDocument();
+  });
+
+  it("selects every province polygon while keeping unavailable journeys closed", () => {
+    const { container } = render(<App />);
+    const daNang = container.querySelector(
+      '[data-province-code="48"]',
+    ) as SVGPathElement;
+
+    fireEvent.click(daNang);
+
+    expect(daNang).toHaveAttribute("data-selected", "true");
+    expect(
+      screen.getByRole("heading", { name: "Hành trình Đà Nẵng" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Sắp mở" })).toBeDisabled();
+    expect(JSON.parse(window.render_game_to_text!())).toMatchObject({
+      selectedProvince: {
+        code: "48",
+        name: "Đà Nẵng",
+        status: "coming-soon",
+      },
+    });
+  });
+
+  it("persists Hue completion after returning to the map and remounting", () => {
+    window.history.replaceState({}, "", "/hanh-trinh/hue");
+    const firstRender = render(<App />);
+    const input = screen.getByLabelText("Gõ tên địa danh");
+
+    for (const answer of [
+      "dai noi",
+      "thien mu",
+      "ung lang",
+      "minh mang",
+      "vong canh",
+    ]) {
+      fireEvent.change(input, { target: { value: answer } });
+    }
+
+    expect(
+      screen.getByRole("heading", { name: "Hoàn thành hành trình" }),
+    ).toBeInTheDocument();
+    fireEvent.click(
+      screen.getByRole("button", { name: "Trở về bản đồ hành trình" }),
+    );
+    expect(
+      firstRender.container.querySelector('[data-province-code="46"]'),
+    ).toHaveAttribute("data-status", "completed");
+
+    firstRender.unmount();
+    window.history.replaceState({}, "", "/ban-do");
+    const secondRender = render(<App />);
+    expect(
+      secondRender.container.querySelector('[data-province-code="46"]'),
+    ).toHaveAttribute("data-status", "completed");
+    expect(JSON.parse(window.render_game_to_text!())).toMatchObject({
+      completedJourneys: ["hue-heritage-prototype"],
+      selectedProvince: { code: "46", status: "completed" },
+    });
   });
 
   it("runs a different province journey without changing the engine", () => {

@@ -161,10 +161,53 @@ button {
   filter: drop-shadow(0 20px 25px color-mix(in srgb, var(--forest) 22%, transparent));
 }
 
-.selector-vietnam-land {
-  stroke: color-mix(in srgb, var(--forest) 67%, var(--surface));
+.selector-province-shape {
+  cursor: pointer;
+  fill: color-mix(in srgb, var(--surface-strong) 74%, var(--map));
+  stroke: color-mix(in srgb, var(--forest) 58%, var(--surface));
   stroke-linejoin: round;
-  stroke-width: 1.2;
+  stroke-width: 1.15;
+  vector-effect: non-scaling-stroke;
+  transition:
+    fill 160ms ease,
+    opacity 160ms ease,
+    stroke 160ms ease;
+}
+
+.selector-province-shape:hover,
+.selector-province-shape:focus {
+  fill: color-mix(in srgb, var(--forest) 20%, var(--surface));
+  stroke: var(--foreground);
+  outline: none;
+}
+
+.selector-province-shape[data-status="available"] {
+  fill: color-mix(in srgb, var(--accent) 38%, var(--surface));
+  stroke: var(--accent);
+}
+
+.selector-province-shape[data-status="completed"] {
+  fill: color-mix(in srgb, var(--forest) 72%, var(--surface));
+  stroke: var(--surface);
+}
+
+.selector-province-shape[data-selected="true"] {
+  stroke: var(--accent);
+  stroke-width: 2;
+}
+
+.selector-province-shape[data-filtered="true"] {
+  opacity: 0.2;
+}
+
+.selector-province-hit-area {
+  cursor: pointer;
+  fill: transparent;
+  pointer-events: all;
+}
+
+.selector-selected-marker {
+  pointer-events: none;
 }
 
 .selector-journey-marker {
@@ -184,6 +227,7 @@ button {
 
 .selector-marker-pulse {
   fill: color-mix(in srgb, var(--accent) 22%, transparent);
+  transform-box: fill-box;
   transform-origin: center;
 }
 
@@ -195,6 +239,24 @@ button {
 
 .selector-marker-core {
   fill: var(--accent);
+}
+
+.selector-map-source {
+  position: absolute;
+  right: 1.1rem;
+  bottom: 8.4rem;
+  z-index: 2;
+  max-width: min(25rem, calc(100% - 2rem));
+  margin: 0;
+  color: color-mix(in srgb, var(--foreground) 72%, transparent);
+  font-size: 0.6rem;
+  line-height: 1.35;
+  text-align: right;
+}
+
+.selector-map-source a {
+  color: inherit;
+  text-underline-offset: 0.15em;
 }
 
 .selector-featured-journey {
@@ -252,6 +314,17 @@ button {
 .selector-featured-journey button span {
   color: inherit;
   font-size: 1rem;
+}
+
+.selector-featured-journey button:disabled {
+  cursor: default;
+  border: 1px solid var(--border);
+  background: var(--surface-strong);
+  color: var(--muted);
+}
+
+.selector-featured-journey[data-status="completed"] {
+  border-color: color-mix(in srgb, var(--forest) 55%, transparent);
 }
 
 .selector-search input {
@@ -326,23 +399,26 @@ button {
   font-weight: 700;
 }
 
-.selector-province-row[data-available="true"] {
+.selector-province-row[data-status="available"],
+.selector-province-row[data-status="completed"] {
   border-color: color-mix(in srgb, var(--forest) 30%, transparent);
   background: color-mix(in srgb, var(--forest) 8%, var(--surface));
   color: var(--foreground);
 }
 
-.selector-province-row[data-available="true"]:hover {
+.selector-province-row:hover,
+.selector-province-row[data-selected="true"] {
   border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface));
+  color: var(--foreground);
 }
 
-.selector-province-row[data-available="true"] small {
+.selector-province-row[data-status="available"] small {
   color: var(--accent);
 }
 
-.selector-province-row:disabled {
-  cursor: default;
-  opacity: 0.72;
+.selector-province-row[data-status="completed"] small {
+  color: var(--forest);
 }
 
 .map-stage {
@@ -1092,6 +1168,14 @@ button {
     right: 0.75rem;
     bottom: 0.75rem;
     left: 0.75rem;
+  }
+
+  .selector-map-source {
+    right: 0.85rem;
+    bottom: 9rem;
+    left: 0.85rem;
+    max-width: none;
+    text-align: center;
   }
 
   .selector-featured-journey h3 {
