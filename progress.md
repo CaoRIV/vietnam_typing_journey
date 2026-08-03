@@ -89,3 +89,15 @@ Original prompt: làm phần 2: Làm prototype bản đồ. Vẽ bản đồ Vi�
 
 - Biên tập dữ liệu địa điểm/tuyến cho các tỉnh tiếp theo và thêm `journeySlug` vào catalog khi đủ nội dung kiểm duyệt.
 - Khi Directions API được nối vào từng hành trình, giữ cơ chế progress hiện tại và thay phần hình học tuyến tĩnh bằng tuyến xe chạy thực tế.
+
+## 2026-08-03 - Routing provider foundation
+
+- Added `src/routing` with the async `RoutingProvider` interface, route LineString types, nearest-stop results, and route-geometry results.
+- `staticRoutingProvider` uses Haversine distance to choose the nearest unvisited stop, estimates fallback duration at 30 km/h, and returns a LineString from existing `geoPoints` when route data is available.
+- The provider falls back to a direct line when no static route is supplied; this is the future fallback layer for Matrix/Directions.
+- Added 4 tests covering nearest stop selection, empty candidates, static route slicing between stops, and direct-line fallback.
+
+## TODO next
+
+- Wire the provider into the game loop after a correct place answer: read current coordinates, filter unvisited stops, select nearest, then animate using the returned route geometry.
+- After the static flow is stable, add `MapboxRoutingProvider` for Matrix API and Directions API with cache and fallback to `staticRoutingProvider`.
