@@ -101,3 +101,16 @@ Original prompt: làm phần 2: Làm prototype bản đồ. Vẽ bản đồ Vi�
 
 - Wire the provider into the game loop after a correct place answer: read current coordinates, filter unvisited stops, select nearest, then animate using the returned route geometry.
 - After the static flow is stable, add `MapboxRoutingProvider` for Matrix API and Directions API with cache and fallback to `staticRoutingProvider`.
+
+## 2026-08-04 - Small static routing integration slice
+
+- Added `src/routing/routeStep.ts` as the narrow integration layer between journey route data and `staticRoutingProvider`.
+- `resolveNextRouteStep` accepts the current stop, visited stop ids, and a route; it filters unvisited stops, asks the provider for the nearest candidate, then returns the selected stop plus route geometry.
+- Kept the game reducer and UI unchanged in this slice so the async routing boundary stays outside pure game state.
+- Added 3 tests for route-start selection, nearest unvisited selection after the first Hue stop, and the all-stops-visited null case.
+- Verified with local Vitest routing tests and TypeScript build mode. `npm` is currently broken on this machine because the global npm CLI path is missing, so commands were run through `node_modules\\.bin`.
+
+## TODO next
+
+- Use `resolveNextRouteStep` from the play screen after a stop is completed, then feed the returned geometry into the existing map animation state.
+- Once the UI is consuming route steps, update `render_game_to_text` to include the selected routing provider, current route segment, and next stop id.
