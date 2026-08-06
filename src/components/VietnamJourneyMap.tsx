@@ -35,6 +35,7 @@ import {
   getProgressAtPointIndex,
 } from "../lib/routeGeometry";
 import { getGeoRoutePosition } from "../lib/mapboxRoute";
+import { resolveNextRouteStep, type RouteStep } from "../routing/routeStep";
 import type { MapboxCameraState } from "./MapboxJourneyMap";
 
 const MapboxJourneyMap = lazy(async () => {
@@ -165,6 +166,7 @@ function JourneyGameSession({
   const [mapRenderer, setMapRenderer] = useState<
     "svg" | "mapbox-loading" | "mapbox"
   >(hasMapboxAccessToken ? "mapbox-loading" : "svg");
+  const [nextRouteStep, setNextRouteStep] = useState<RouteStep | null>(null);
 
   const mapStageRef = useRef<HTMLElement>(null);
   const mapSvgRef = useRef<SVGSVGElement>(null);
@@ -202,34 +204,58 @@ function JourneyGameSession({
   const lastVisitedPlace = lastVisitedStop
     ? placeById.get(lastVisitedStop.id)
     : undefined;
+  const visitedStopIds = useMemo(
+    () =>
+      gameState.stops
+        .filter(
+          (_, index) =>
+            gameState.status === "completed" ||
+            index < gameState.currentStopIndex,
+        )
+        .map((stop) => stop.id),
+    [gameState.currentStopIndex, gameState.status, gameState.stops],
+  );
+  const currentRouteStopId =
+    gameState.status === "completed"
+      ? gameState.stops[gameState.currentStopIndex]?.id
+      : gameState.currentStopIndex > 0
+        ? gameState.stops[gameState.currentStopIndex - 1]?.id
+        : null;
 
   useEffect(() => {
     gameStateRef.current = gameState;
   }, [gameState]);
 
   useEffect(() => {
-    const visitedPlaceIds = gameState.stops
-      .filter(
-        (_, index) =>
-          gameState.status === "completed" ||
-          index < gameState.currentStopIndex,
-      )
-      .map((stop) => stop.id);
-
     onProgressChange?.({
       journeyId: journey.id,
-      visitedPlaceIds,
+      visitedPlaceIds: visitedStopIds,
       completed: gameState.status === "completed",
       result: gameState.result,
     });
   }, [
-    gameState.currentStopIndex,
     gameState.result,
     gameState.status,
-    gameState.stops,
     journey.id,
     onProgressChange,
+    visitedStopIds,
   ]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    void resolveNextRouteStep({
+      route,
+      currentStopId: currentRouteStopId,
+      visitedStopIds,
+    }).then((step) => {
+      if (!cancelled) setNextRouteStep(step);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [currentRouteStopId, route, visitedStopIds]);
 
   const markerStates = useMemo(
     () =>
@@ -392,6 +418,16 @@ function JourneyGameSession({
           province: journey.shortName,
         },
         route: route.name,
+        routing: nextRouteStep
+          ? {
+              provider: nextRouteStep.geometry.provider,
+              fromStopId: nextRouteStep.from.id,
+              toStopId: nextRouteStep.to.id,
+              distanceMeters: Math.round(nextRouteStep.geometry.distanceMeters),
+              routePointCount:
+                nextRouteStep.geometry.geometry.coordinates.length,
+            }
+          : null,
         progress: Number(liveMetrics.progress.toFixed(4)),
         mapProgress: Number(liveMapProgress.toFixed(4)),
         targetMapProgress: Number(targetMapProgress.toFixed(4)),
@@ -477,6 +513,7 @@ function JourneyGameSession({
   }, [
     journey,
     mapRenderer,
+    nextRouteStep,
     resetMapView,
     route,
     setMapZoom,
