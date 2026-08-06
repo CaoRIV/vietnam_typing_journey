@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import App from "./App";
@@ -180,7 +180,7 @@ describe("Hue tourism map prototype", () => {
     ).toBeInTheDocument();
   });
 
-  it("renders all five places and exposes the map state", () => {
+  it("renders all five places and exposes the map state", async () => {
     const { container } = render(
       <VietnamJourneyMap journey={hueProvince} />,
     );
@@ -208,6 +208,13 @@ describe("Hue tourism map prototype", () => {
     });
     expect(state.progress).toBe(0);
     expect(state.stops).toHaveLength(5);
+    await waitFor(() =>
+      expect(JSON.parse(window.render_game_to_text!()).routing).toMatchObject({
+        provider: "static",
+        fromStopId: "hue-heritage-prototype:start",
+        toStopId: "imperial-city-hue",
+      }),
+    );
   });
 
   it("moves the route progress and reveals the visited place after a correct answer", () => {
