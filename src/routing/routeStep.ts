@@ -4,7 +4,8 @@ import type { RouteGeometryResult, RoutingPoint, RoutingProvider } from "./types
 
 export type ResolveNextRouteStepInput = {
   route: JourneyRoute;
-  currentStopId: string | null;
+  currentStop?: JourneyStop | null;
+  currentStopId?: string | null;
   visitedStopIds: readonly string[];
   provider?: RoutingProvider;
 };
@@ -34,15 +35,17 @@ const createStartPoint = (route: JourneyRoute): RoutingPoint => ({
 
 export async function resolveNextRouteStep({
   route,
-  currentStopId,
+  currentStop,
+  currentStopId = currentStop?.id ?? null,
   visitedStopIds,
   provider = staticRoutingProvider,
 }: ResolveNextRouteStepInput): Promise<RouteStep | null> {
   const visited = new Set(visitedStopIds);
-  const currentStop = currentStopId
-    ? route.stops.find((stop) => stop.id === currentStopId)
+  const stop = currentStopId
+    ? route.stops.find((s) => s.id === currentStopId) ??
+      (currentStop?.id === currentStopId ? currentStop : undefined)
     : undefined;
-  const from = currentStop ? toRoutingPoint(currentStop) : createStartPoint(route);
+  const from = stop ? toRoutingPoint(stop) : createStartPoint(route);
   const candidates = route.stops.filter((stop) => !visited.has(stop.id));
   const nearest = await provider.getNearestUnvisitedStop(
     from.coordinates,

@@ -246,6 +246,7 @@ function JourneyGameSession({
 
     void resolveNextRouteStep({
       route,
+      currentStop: lastVisitedStop ?? null,
       currentStopId: currentRouteStopId,
       visitedStopIds,
     }).then((step) => {
@@ -255,7 +256,7 @@ function JourneyGameSession({
     return () => {
       cancelled = true;
     };
-  }, [currentRouteStopId, route, visitedStopIds]);
+  }, [currentRouteStopId, lastVisitedStop, route, visitedStopIds]);
 
   const markerStates = useMemo(
     () =>
@@ -418,14 +419,20 @@ function JourneyGameSession({
           province: journey.shortName,
         },
         route: route.name,
+        nextStopId: nextRouteStep?.to.id ?? null,
+        routingProvider: nextRouteStep?.geometry.provider ?? null,
+        currentRouteSegment: nextRouteStep?.geometry.geometry ?? null,
         routing: nextRouteStep
           ? {
               provider: nextRouteStep.geometry.provider,
+              routingProvider: nextRouteStep.geometry.provider,
               fromStopId: nextRouteStep.from.id,
               toStopId: nextRouteStep.to.id,
+              nextStopId: nextRouteStep.to.id,
               distanceMeters: Math.round(nextRouteStep.geometry.distanceMeters),
               routePointCount:
                 nextRouteStep.geometry.geometry.coordinates.length,
+              currentRouteSegment: nextRouteStep.geometry.geometry,
             }
           : null,
         progress: Number(liveMetrics.progress.toFixed(4)),
