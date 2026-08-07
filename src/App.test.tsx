@@ -236,6 +236,35 @@ describe("Hue tourism map prototype", () => {
     expect(screen.getByRole("heading", { name: "Đại Nội Huế" })).toBeInTheDocument();
   });
 
+  it("selects the next route step and exposes nextStopId, routingProvider, currentRouteSegment after completing a stop", async () => {
+    render(<VietnamJourneyMap journey={hueProvince} />);
+
+    await waitFor(() => {
+      const state = JSON.parse(window.render_game_to_text!());
+      expect(state.nextStopId).toBe("imperial-city-hue");
+      expect(state.routingProvider).toBe("static");
+      expect(state.currentRouteSegment).toMatchObject({ type: "LineString" });
+    });
+
+    const typingInput = screen.getByLabelText("Gõ tên địa danh");
+    fireEvent.change(typingInput, { target: { value: "dai noi" } });
+
+    await waitFor(() => {
+      const state = JSON.parse(window.render_game_to_text!());
+      expect(state.nextStopId).toBe("thien-mu-pagoda");
+      expect(state.routingProvider).toBe("static");
+      expect(state.currentRouteSegment).toMatchObject({ type: "LineString" });
+      expect(state.routing).toMatchObject({
+        provider: "static",
+        routingProvider: "static",
+        fromStopId: "imperial-city-hue",
+        toStopId: "thien-mu-pagoda",
+        nextStopId: "thien-mu-pagoda",
+        currentRouteSegment: { type: "LineString" },
+      });
+    });
+  });
+
   it("zooms the map and restores the full Vietnam view", () => {
     const { container } = render(
       <VietnamJourneyMap journey={hueProvince} />,

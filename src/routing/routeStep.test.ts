@@ -39,6 +39,18 @@ describe("resolveNextRouteStep", () => {
     );
   });
 
+  it("accepts currentStop object directly to select the next stop", async () => {
+    const currentStop = hueProvince.route.stops[0];
+    const step = await resolveNextRouteStep({
+      route: hueProvince.route,
+      currentStop,
+      visitedStopIds: [currentStop.id],
+    });
+
+    expect(step?.from.id).toBe("imperial-city-hue");
+    expect(step?.to.id).toBe("thien-mu-pagoda");
+  });
+
   it("returns null when every stop has already been visited", async () => {
     const step = await resolveNextRouteStep({
       route: hueProvince.route,

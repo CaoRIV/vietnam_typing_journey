@@ -110,7 +110,16 @@ Original prompt: làm phần 2: Làm prototype bản đồ. Vẽ bản đồ Vi�
 - Added 3 tests for route-start selection, nearest unvisited selection after the first Hue stop, and the all-stops-visited null case.
 - Verified with local Vitest routing tests and TypeScript build mode. `npm` is currently broken on this machine because the global npm CLI path is missing, so commands were run through `node_modules\\.bin`.
 
+## 2026-08-07 - Play layer route step integration
+
+- Connected `resolveNextRouteStep` into the play screen (`VietnamJourneyMap.tsx`) after a stop is completed.
+- Passed `currentStop` (and `currentStopId`), `visitedStopIds`, and current `route` to `resolveNextRouteStep`.
+- Stored the resolved route step containing `selectedStop` (`to`), `routeGeometry` (`geometry.geometry`), and `provider` into React state.
+- Updated `render_game_to_text` to output `nextStopId`, `routingProvider`, and `currentRouteSegment` at top-level and inside `routing`.
+- Added unit and integration tests in `src/routing/routeStep.test.ts` and `src/App.test.tsx` proving route step selection after completing a stop.
+- All 41 Vitest tests and TypeScript typechecks passed cleanly.
+
 ## TODO next
 
-- Use `resolveNextRouteStep` from the play screen after a stop is completed, then feed the returned geometry into the existing map animation state.
-- Once the UI is consuming route steps, update `render_game_to_text` to include the selected routing provider, current route segment, and next stop id.
+- Add `MapboxRoutingProvider` for Directions API / Matrix API with caching and fallback to `staticRoutingProvider`.
+
