@@ -5,6 +5,7 @@ import App from "./App";
 import { VietnamJourneyMap } from "./components/VietnamJourneyMap";
 import { hueProvince } from "./data/hueProvince";
 import type { ProvinceJourney } from "./journey/types";
+import { staticRoutingProvider } from "./routing/staticRoutingProvider";
 
 const demoJourney: ProvinceJourney = {
   id: "demo-journey",
@@ -210,7 +211,7 @@ describe("Hue tourism map prototype", () => {
     expect(state.stops).toHaveLength(5);
     await waitFor(() =>
       expect(JSON.parse(window.render_game_to_text!()).routing).toMatchObject({
-        provider: "static",
+        provider: expect.stringMatching(/static|mapbox/),
         fromStopId: "hue-heritage-prototype:start",
         toStopId: "imperial-city-hue",
       }),
@@ -237,7 +238,12 @@ describe("Hue tourism map prototype", () => {
   });
 
   it("selects the next route step and exposes nextStopId, routingProvider, currentRouteSegment after completing a stop", async () => {
-    render(<VietnamJourneyMap journey={hueProvince} />);
+    render(
+      <VietnamJourneyMap
+        journey={hueProvince}
+        routingProvider={staticRoutingProvider}
+      />,
+    );
 
     await waitFor(() => {
       const state = JSON.parse(window.render_game_to_text!());

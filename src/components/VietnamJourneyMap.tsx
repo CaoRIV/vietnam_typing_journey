@@ -35,7 +35,9 @@ import {
   getProgressAtPointIndex,
 } from "../lib/routeGeometry";
 import { getGeoRoutePosition } from "../lib/mapboxRoute";
+import { mapboxRoutingProvider } from "../routing/mapboxRoutingProvider";
 import { resolveNextRouteStep, type RouteStep } from "../routing/routeStep";
+import type { RoutingProvider } from "../routing/types";
 import type { MapboxCameraState } from "./MapboxJourneyMap";
 
 const MapboxJourneyMap = lazy(async () => {
@@ -117,12 +119,14 @@ type VietnamJourneyMapProps = {
   journey: ProvinceJourney;
   onExit?: () => void;
   onProgressChange?: (update: JourneyProgressUpdate) => void;
+  routingProvider?: RoutingProvider;
 };
 
 export function VietnamJourneyMap({
   journey,
   onExit,
   onProgressChange,
+  routingProvider,
 }: VietnamJourneyMapProps) {
   return (
     <JourneyGameSession
@@ -130,6 +134,7 @@ export function VietnamJourneyMap({
       journey={journey}
       onExit={onExit}
       onProgressChange={onProgressChange}
+      routingProvider={routingProvider}
     />
   );
 }
@@ -138,6 +143,7 @@ function JourneyGameSession({
   journey,
   onExit,
   onProgressChange,
+  routingProvider = mapboxRoutingProvider,
 }: VietnamJourneyMapProps) {
   const route = journey.route;
   const gameConfig = useMemo(() => createGameConfig(journey), [journey]);
@@ -249,6 +255,7 @@ function JourneyGameSession({
       currentStop: lastVisitedStop ?? null,
       currentStopId: currentRouteStopId,
       visitedStopIds,
+      provider: routingProvider,
     }).then((step) => {
       if (!cancelled) setNextRouteStep(step);
     });
@@ -256,7 +263,7 @@ function JourneyGameSession({
     return () => {
       cancelled = true;
     };
-  }, [currentRouteStopId, lastVisitedStop, route, visitedStopIds]);
+  }, [currentRouteStopId, lastVisitedStop, route, routingProvider, visitedStopIds]);
 
   const markerStates = useMemo(
     () =>
