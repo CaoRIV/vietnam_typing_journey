@@ -119,7 +119,15 @@ Original prompt: làm phần 2: Làm prototype bản đồ. Vẽ bản đồ Vi�
 - Added unit and integration tests in `src/routing/routeStep.test.ts` and `src/App.test.tsx` proving route step selection after completing a stop.
 - All 41 Vitest tests and TypeScript typechecks passed cleanly.
 
-## TODO next
+## 2026-08-08 - MapboxRoutingProvider with Matrix API, Directions API, Caching, and Fallback
 
-- Add `MapboxRoutingProvider` for Directions API / Matrix API with caching and fallback to `staticRoutingProvider`.
+- Created `src/routing/mapboxRoutingProvider.ts` implementing `RoutingProvider` for Mapbox Directions & Matrix APIs.
+- `getNearestUnvisitedStop` queries Mapbox Matrix API (`/directions-matrix/v5/mapbox/driving/...`) to select the closest unvisited stop based on driving distance/duration.
+- `getRouteGeometry` queries Mapbox Directions API (`/directions/v5/mapbox/driving/...`) to fetch full GeoJSON driving polyline geometry, distance, and duration.
+- Implemented in-memory response caching (`matrixCache` and `directionsCache`) to prevent redundant API calls and optimize quota usage.
+- Added graceful automatic fallback: if Mapbox access token is missing, placeholder/invalid, or network/API calls fail, requests fall back seamlessly to `staticRoutingProvider`.
+- Integrated `mapboxRoutingProvider` into `VietnamJourneyMap.tsx` and updated `resolveNextRouteStep` to support custom/default providers.
+- Added comprehensive unit tests in `src/routing/mapboxRoutingProvider.test.ts` (9 tests) and updated `src/routing/routeStep.test.ts` & `src/App.test.tsx`.
+- All 51 Vitest tests, TypeScript typechecks (`tsc --noEmit`), and ESLint passed cleanly without errors.
+
 

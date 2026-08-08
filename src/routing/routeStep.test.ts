@@ -1,6 +1,7 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { hueProvince } from "../data/hueProvince";
+import { createMapboxRoutingProvider } from "./mapboxRoutingProvider";
 import { resolveNextRouteStep } from "./routeStep";
 
 describe("resolveNextRouteStep", () => {
@@ -59,5 +60,54 @@ describe("resolveNextRouteStep", () => {
     });
 
     expect(step).toBeNull();
+  });
+
+  it("uses custom routing provider (e.g. Mapbox) when passed", async () => {
+    const fetchFn = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          code: "Ok",
+          distances: [[0, 1000, 2000, 3000, 4000, 5000]],
+          durations: [[0, 100, 200, 300, 400, 500]],
+        }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          code: "Ok",
+          routes: [
+            {
+              geometry: {
+                type: "LineString",
+                coordinates: [
+                  hueProvince.route.geoPoints[0],
+                  hueProvince.route.stops[0].coordinates,
+                ],
+              },
+              distance: 1234,
+              duration: 120,
+            },
+          ],
+        }),
+      });
+
+    const mapboxProvider = createMapboxRoutingProvider({
+      accessToken: "pk.eyJ1IjoibWFwYm94In0.testtoken",
+      fetchFn,
+    });
+
+    const step = await resolveNextRouteStep({
+      route: hueProvince.route,
+      currentStopId: null,
+      visitedStopIds: [],
+      provider: mapboxProvider,
+    });
+
+    expect(step?.to.id).toBe("imperial-city-hue");
+    expect(step?.geometry.provider).toBe("mapbox");
+    expect(step?.geometry.distanceMeters).toBe(1234);
+    expect(step?.geometry.durationSeconds).toBe(120);
   });
 });
