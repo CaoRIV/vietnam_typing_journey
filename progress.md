@@ -130,4 +130,15 @@ Original prompt: làm phần 2: Làm prototype bản đồ. Vẽ bản đồ Vi�
 - Added comprehensive unit tests in `src/routing/mapboxRoutingProvider.test.ts` (9 tests) and updated `src/routing/routeStep.test.ts` & `src/App.test.tsx`.
 - All 51 Vitest tests, TypeScript typechecks (`tsc --noEmit`), and ESLint passed cleanly without errors.
 
+## 2026-08-09 - Audio FX & Sound Mute Toggle integration
+
+- Added `src/sound/soundSettings.ts` for managing sound mute state persistence in `localStorage` (`go-xuyen-viet.sound-settings.v1`).
+- Added `src/sound/audioSynthesizer.ts` using Web Audio API to procedurally synthesize pleasant audio effects (`keypress`, `error`, `stop_completed`, `journey_completed`) with zero network overhead and automatic AudioContext resume on interaction.
+- Created `src/hooks/useSound.ts` React hook providing reactive mute state control and sound player helpers.
+- Integrated `useSound` into `VietnamJourneyMap.tsx` with a reactive `useEffect` triggering audio feedback on keypress, error, stop completion, and journey completion events.
+- Added Mute/Unmute toggle button (`#sound-mute-toggle`) to the top header in `VietnamJourneyMap.tsx`.
+- Created comprehensive unit tests in `src/sound/soundSettings.test.ts` (4 tests) and `src/hooks/useSound.test.ts` (2 tests).
+- All TypeScript typechecks (`tsc --noEmit`) and unit tests passed cleanly.
+
+
 

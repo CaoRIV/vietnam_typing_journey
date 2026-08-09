@@ -12,6 +12,7 @@ import {
   useState,
 } from "react";
 
+import { useSound } from "../hooks/useSound";
 import { vietnamMapGeometry } from "../data/vietnamMap";
 import { getGameMetrics } from "../game/metrics";
 import { normalizeVietnameseAnswer } from "../game/normalize";
@@ -193,6 +194,42 @@ function JourneyGameSession({
     scale: number;
     viewport: MapViewport;
   } | null>(null);
+
+  const {
+    isMuted,
+    toggleMute,
+    playKeypress,
+    playError,
+    playStopCompleted,
+    playJourneyCompleted,
+  } = useSound();
+
+  const prevGameStateRef = useRef(gameState);
+
+  useEffect(() => {
+    const prev = prevGameStateRef.current;
+    if (prev !== gameState) {
+      if (gameState.status === "completed" && prev.status !== "completed") {
+        playJourneyCompleted();
+      } else if (
+        gameState.currentStopIndex > prev.currentStopIndex &&
+        gameState.status !== "completed"
+      ) {
+        playStopCompleted();
+      } else if (gameState.correctInputs > prev.correctInputs) {
+        playKeypress();
+      } else if (gameState.incorrectInputs > prev.incorrectInputs) {
+        playError();
+      }
+      prevGameStateRef.current = gameState;
+    }
+  }, [
+    gameState,
+    playKeypress,
+    playError,
+    playStopCompleted,
+    playJourneyCompleted,
+  ]);
 
   const metrics = useMemo(() => getGameMetrics(gameState), [gameState]);
   const mapProgress = getMapProgressForGame(
@@ -643,7 +680,20 @@ function JourneyGameSession({
           <h1 className="mt-2 text-2xl font-extrabold tracking-[-0.035em] text-foreground sm:text-3xl">Tỉnh thí điểm: {journey.shortName}</h1>
           </div>
         </div>
-        <p className="hidden max-w-[42ch] text-right text-sm leading-6 text-muted md:block">{journey.description}</p>
+        <div className="flex items-center gap-3">
+          <button
+            id="sound-mute-toggle"
+            type="button"
+            className="game-secondary-button flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold"
+            aria-label={isMuted ? "Bật âm thanh" : "Tắt âm thanh"}
+            title={isMuted ? "Bật âm thanh" : "Tắt âm thanh"}
+            onClick={toggleMute}
+          >
+            <span aria-hidden="true">{isMuted ? "🔇" : "🔊"}</span>
+            <span>{isMuted ? "Tắt âm" : "Âm thanh"}</span>
+          </button>
+          <p className="hidden max-w-[42ch] text-right text-sm leading-6 text-muted md:block">{journey.description}</p>
+        </div>
       </header>
 
       <div className="mx-auto grid max-w-[1400px] gap-4 lg:grid-cols-[minmax(0,1.62fr)_minmax(20rem,0.78fr)] lg:gap-5">
