@@ -140,5 +140,16 @@ Original prompt: làm phần 2: Làm prototype bản đồ. Vẽ bản đồ Vi�
 - Created comprehensive unit tests in `src/sound/soundSettings.test.ts` (4 tests) and `src/hooks/useSound.test.ts` (2 tests).
 - All TypeScript typechecks (`tsc --noEmit`) and unit tests passed cleanly.
 
+## 2026-08-10 - Routing integration verification and token fallback fix
+
+- Verified the play-layer flow: after completing a stop, `resolveNextRouteStep` selects the next unvisited stop and `render_game_to_text` exposes the new segment.
+- Fixed the type boundary by passing the route stop id to the resolver instead of a game-only stop definition.
+- Fixed `isValidMapboxToken` so `replace_with_your_mapbox_token` uses the static provider without issuing browser API requests.
+- Added a regression assertion for the placeholder token and updated Mapbox test fixtures with required labels.
+- Verification passed: 57 Vitest tests, TypeScript, ESLint, production build, SVG fallback screenshot, and Playwright interaction flow with no console errors.
+
+## TODO next
+
+- Decide whether production routing calls should move behind a server proxy to avoid browser CORS failures in environments where Mapbox API responses do not include the required headers.
 
 

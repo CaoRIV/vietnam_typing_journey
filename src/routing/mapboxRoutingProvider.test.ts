@@ -10,18 +10,21 @@ const mockStops: JourneyStop[] = [
     name: "Đại Nội Huế",
     coordinates: [107.579, 16.469],
     pointIndex: 1,
+    label: { x: 0, y: 0, anchor: "start" },
   },
   {
     id: "hue:thien-mu",
     name: "Chùa Thiên Mụ",
     coordinates: [107.544, 16.454],
     pointIndex: 2,
+    label: { x: 0, y: 0, anchor: "start" },
   },
   {
     id: "hue:khai-dinh",
     name: "Lăng Khải Định",
     coordinates: [107.590, 16.398],
     pointIndex: 3,
+    label: { x: 0, y: 0, anchor: "start" },
   },
 ];
 
@@ -39,6 +42,7 @@ describe("isValidMapboxToken", () => {
     expect(isValidMapboxToken("   ")).toBe(false);
     expect(isValidMapboxToken("pk.sample.12345")).toBe(false);
     expect(isValidMapboxToken("YOUR_MAPBOX_ACCESS_TOKEN")).toBe(false);
+    expect(isValidMapboxToken("replace_with_your_mapbox_token")).toBe(false);
   });
 
   it("returns true for plausible token strings", () => {

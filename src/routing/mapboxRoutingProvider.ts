@@ -23,7 +23,8 @@ export function isValidMapboxToken(token?: string): boolean {
   if (
     trimmed.includes("sample") ||
     trimmed.includes("YOUR_MAPBOX") ||
-    trimmed.includes("placeholder")
+    trimmed.includes("placeholder") ||
+    trimmed.includes("replace_with_your")
   ) {
     return false;
   }
