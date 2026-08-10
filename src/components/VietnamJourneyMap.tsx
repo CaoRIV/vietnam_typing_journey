@@ -289,7 +289,6 @@ function JourneyGameSession({
 
     void resolveNextRouteStep({
       route,
-      currentStop: lastVisitedStop ?? null,
       currentStopId: currentRouteStopId,
       visitedStopIds,
       provider: routingProvider,
@@ -300,7 +299,7 @@ function JourneyGameSession({
     return () => {
       cancelled = true;
     };
-  }, [currentRouteStopId, lastVisitedStop, route, routingProvider, visitedStopIds]);
+  }, [currentRouteStopId, route, routingProvider, visitedStopIds]);
 
   const markerStates = useMemo(
     () =>
