@@ -152,4 +152,10 @@ Original prompt: làm phần 2: Làm prototype bản đồ. Vẽ bản đồ Vi�
 
 - Decide whether production routing calls should move behind a server proxy to avoid browser CORS failures in environments where Mapbox API responses do not include the required headers.
 
+## 2026-08-11 - Same-origin routing proxy
+
+- Added same-origin `/api/routing/matrix` and `/api/routing/directions` proxy handlers with coordinate validation, request limits, timeout, and server-only `MAPBOX_ACCESS_TOKEN` usage.
+- `MapboxRoutingProvider` now posts to the proxy by default and keeps static routing as the failure fallback.
+- Wired the proxy into Vite dev/preview and added a minimal production server via `npm start`.
+- Verified 58 tests, TypeScript, ESLint, production build, and the SVG fallback runtime with no browser console errors.
 
