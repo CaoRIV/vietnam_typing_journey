@@ -10,6 +10,7 @@
     "province-map:generate": "node scripts/generate-province-geometry.mjs",
     "prebuild": "npm run map:generate",
     "build": "tsc -b && vite build",
+    "start": "node server/index.mjs",
     "preview": "vite preview",
     "lint": "eslint .",
     "typecheck": "tsc -b --pretty false",

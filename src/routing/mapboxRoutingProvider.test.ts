@@ -34,6 +34,7 @@ const mockFrom: RoutingPoint = {
   coordinates: [107.570, 16.460],
   pointIndex: 0,
 };
+const directMapboxApi = { apiBaseUrl: "https://api.mapbox.com" };
 
 describe("isValidMapboxToken", () => {
   it("returns false for missing, empty, or placeholder tokens", () => {
@@ -56,6 +57,7 @@ describe("createMapboxRoutingProvider", () => {
     const provider = createMapboxRoutingProvider({
       accessToken: "pk.sample.test",
       fetchFn,
+      ...directMapboxApi,
     });
 
     const nearest = await provider.getNearestUnvisitedStop(
@@ -105,6 +107,7 @@ describe("createMapboxRoutingProvider", () => {
     const provider = createMapboxRoutingProvider({
       accessToken: "pk.eyJ1IjoibWFwYm94In0.validtoken",
       fetchFn,
+      ...directMapboxApi,
     });
 
     const result = await provider.getNearestUnvisitedStop(
@@ -139,6 +142,7 @@ describe("createMapboxRoutingProvider", () => {
     const provider = createMapboxRoutingProvider({
       accessToken: "pk.eyJ1IjoibWFwYm94In0.validtoken",
       fetchFn,
+      ...directMapboxApi,
     });
 
     await provider.getNearestUnvisitedStop(mockFrom.coordinates, mockStops);
@@ -174,6 +178,7 @@ describe("createMapboxRoutingProvider", () => {
     const provider = createMapboxRoutingProvider({
       accessToken: "pk.eyJ1IjoibWFwYm94In0.validtoken",
       fetchFn,
+      ...directMapboxApi,
     });
 
     const toPoint: RoutingPoint = {
@@ -224,6 +229,7 @@ describe("createMapboxRoutingProvider", () => {
     const provider = createMapboxRoutingProvider({
       accessToken: "pk.eyJ1IjoibWFwYm94In0.validtoken",
       fetchFn,
+      ...directMapboxApi,
     });
 
     const toPoint: RoutingPoint = {
@@ -244,6 +250,7 @@ describe("createMapboxRoutingProvider", () => {
     const provider = createMapboxRoutingProvider({
       accessToken: "pk.eyJ1IjoibWFwYm94In0.validtoken",
       fetchFn,
+      ...directMapboxApi,
     });
 
     const nearest = await provider.getNearestUnvisitedStop(
@@ -257,6 +264,28 @@ describe("createMapboxRoutingProvider", () => {
     );
 
     expect(nearest).toEqual(staticNearest);
+  });
+
+  it("uses the same-origin proxy with a POST payload by default", async () => {
+    const fetchFn = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        code: "Ok",
+        distances: [[0, 5000, 1200, 8000]],
+        durations: [[0, 600, 150, 900]],
+      }),
+    });
+    const provider = createMapboxRoutingProvider({ fetchFn });
+
+    await provider.getNearestUnvisitedStop(mockFrom.coordinates, mockStops);
+
+    const [url, init] = fetchFn.mock.calls[0];
+    expect(url).toBe("/api/routing/matrix");
+    expect(init).toMatchObject({
+      method: "POST",
+      headers: { "content-type": "application/json" },
+    });
+    expect(JSON.parse(init.body as string).coordinates).toHaveLength(4);
   });
 
   it("returns null for empty candidates", async () => {

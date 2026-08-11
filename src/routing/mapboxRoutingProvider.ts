@@ -11,10 +11,12 @@ export type MapboxRoutingProviderOptions = {
   accessToken?: string;
   fetchFn?: typeof fetch;
   fallbackProvider?: RoutingProvider;
+  apiBaseUrl?: string;
   baseUrl?: string;
 };
 
 const DEFAULT_BASE_URL = "https://api.mapbox.com";
+const DEFAULT_PROXY_BASE_URL = "/api/routing";
 
 export function isValidMapboxToken(token?: string): boolean {
   if (!token) return false;
@@ -60,7 +62,26 @@ export function createMapboxRoutingProvider(
     options.fetchFn ??
     ((...args: Parameters<typeof fetch>) => globalThis.fetch(...args));
   const fallbackProvider = options.fallbackProvider ?? staticRoutingProvider;
-  const baseUrl = options.baseUrl ?? DEFAULT_BASE_URL;
+  const apiBaseUrl = (
+    options.apiBaseUrl ?? options.baseUrl ?? DEFAULT_PROXY_BASE_URL
+  ).replace(
+    /\/$/,
+    "",
+  );
+  const usesDirectMapboxApi =
+    options.baseUrl !== undefined || apiBaseUrl === DEFAULT_BASE_URL;
+
+  const request = (path: string, body: unknown, query = "") => {
+    if (usesDirectMapboxApi) {
+      return fetchFn(`${apiBaseUrl}${path}${query}`);
+    }
+
+    return fetchFn(`${apiBaseUrl}${path}`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body),
+    });
+  };
 
   const matrixCache = new Map<string, NearestStopResult>();
   const directionsCache = new Map<string, RouteGeometryResult>();
@@ -72,7 +93,7 @@ export function createMapboxRoutingProvider(
     ): Promise<NearestStopResult | null> {
       if (candidates.length === 0) return null;
 
-      if (!isValidMapboxToken(accessToken)) {
+      if (usesDirectMapboxApi && !isValidMapboxToken(accessToken)) {
         return fallbackProvider.getNearestUnvisitedStop(current, candidates);
       }
 
@@ -85,16 +106,23 @@ export function createMapboxRoutingProvider(
       }
 
       try {
-        const coordsString = [
-          current.join(","),
-          ...candidates.map((c) => c.coordinates.join(",")),
-        ].join(";");
-
-        const url = `${baseUrl}/directions-matrix/v5/mapbox/driving/${coordsString}?sources=0&annotations=distance,duration&access_token=${encodeURIComponent(
-          accessToken!,
-        )}`;
-
-        const response = await fetchFn(url);
+        const coordinates = [
+          current,
+          ...candidates.map((candidate) => candidate.coordinates),
+        ];
+        const response = await request(
+          usesDirectMapboxApi
+            ? `/directions-matrix/v5/mapbox/driving/${coordinates
+                .map((point) => point.join(","))
+                .join(";")}`
+            : "/matrix",
+          { coordinates },
+          usesDirectMapboxApi
+            ? `?sources=0&annotations=distance,duration&access_token=${encodeURIComponent(
+                accessToken ?? "",
+              )}`
+            : "",
+        );
         if (!response.ok) {
           return fallbackProvider.getNearestUnvisitedStop(current, candidates);
         }
@@ -147,7 +175,7 @@ export function createMapboxRoutingProvider(
     async getRouteGeometry(
       input: GetRouteGeometryInput,
     ): Promise<RouteGeometryResult> {
-      if (!isValidMapboxToken(accessToken)) {
+      if (usesDirectMapboxApi && !isValidMapboxToken(accessToken)) {
         return fallbackProvider.getRouteGeometry(input);
       }
 
@@ -160,15 +188,20 @@ export function createMapboxRoutingProvider(
       }
 
       try {
-        const coordsString = `${input.from.coordinates.join(
-          ",",
-        )};${input.to.coordinates.join(",")}`;
-
-        const url = `${baseUrl}/directions/v5/mapbox/driving/${coordsString}?geometries=geojson&overview=full&access_token=${encodeURIComponent(
-          accessToken!,
-        )}`;
-
-        const response = await fetchFn(url);
+        const coordinates = [input.from.coordinates, input.to.coordinates];
+        const response = await request(
+          usesDirectMapboxApi
+            ? `/directions/v5/mapbox/driving/${coordinates
+                .map((point) => point.join(","))
+                .join(";")}`
+            : "/directions",
+          { coordinates },
+          usesDirectMapboxApi
+            ? `?geometries=geojson&overview=full&access_token=${encodeURIComponent(
+                accessToken ?? "",
+              )}`
+            : "",
+        );
         if (!response.ok) {
           return fallbackProvider.getRouteGeometry(input);
         }
