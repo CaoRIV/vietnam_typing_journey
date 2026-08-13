@@ -159,3 +159,13 @@ Original prompt: làm phần 2: Làm prototype bản đồ. Vẽ bản đồ Vi�
 - Wired the proxy into Vite dev/preview and added a minimal production server via `npm start`.
 - Verified 58 tests, TypeScript, ESLint, production build, and the SVG fallback runtime with no browser console errors.
 
+## 2026-08-13 - Da Nang place content
+
+- Added a standalone `daNangPlaces` dataset with five stops: Ngũ Hành Sơn, Chùa Linh Ứng Sơn Trà, Cầu Rồng, Bảo tàng Điêu khắc Chăm, and Bán đảo Sơn Trà.
+- Each place includes accepted typing answers, coordinates, description, Wikimedia image attribution, and official Da Nang tourism content sources.
+- Added data tests for completeness, unique ids, coordinate bounds, source metadata, and normalized answer uniqueness.
+- Task 1 verification passed: 2 focused tests, TypeScript, and ESLint.
+
+## TODO next
+
+- Task 2: create the projected SVG/GeoJSON route and stop labels for the Da Nang journey.
