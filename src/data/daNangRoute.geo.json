@@ -1,0 +1,50 @@
+{
+  "id": "da-nang-highlights-prototype",
+  "name": "Hành trình Đà Nẵng",
+  "region": "Đà Nẵng",
+  "stops": [
+    {
+      "id": "marble-mountains",
+      "name": "Ngũ Hành Sơn",
+      "coordinates": [108.265725, 16.005329],
+      "label": { "dx": 38, "dy": 48, "anchor": "start" }
+    },
+    {
+      "id": "museum-of-cham-sculpture",
+      "name": "Bảo tàng Điêu khắc Chăm",
+      "coordinates": [108.223197, 16.060289],
+      "label": { "dx": -42, "dy": 31, "anchor": "end" }
+    },
+    {
+      "id": "dragon-bridge-da-nang",
+      "name": "Cầu Rồng",
+      "coordinates": [108.229958, 16.061047],
+      "label": { "dx": -42, "dy": -8, "anchor": "end" }
+    },
+    {
+      "id": "linh-ung-pagoda-son-tra",
+      "name": "Chùa Linh Ứng Sơn Trà",
+      "coordinates": [108.277559, 16.099683],
+      "label": { "dx": 38, "dy": -12, "anchor": "start" }
+    },
+    {
+      "id": "son-tra-peninsula",
+      "name": "Bán đảo Sơn Trà",
+      "coordinates": [108.269, 16.118],
+      "label": { "dx": 40, "dy": 22, "anchor": "start" }
+    }
+  ],
+  "route": [
+    { "coordinates": [108.2475, 15.993] },
+    { "stopId": "marble-mountains", "coordinates": [108.265725, 16.005329] },
+    { "coordinates": [108.253, 16.02] },
+    { "coordinates": [108.238, 16.041] },
+    { "stopId": "museum-of-cham-sculpture", "coordinates": [108.223197, 16.060289] },
+    { "stopId": "dragon-bridge-da-nang", "coordinates": [108.229958, 16.061047] },
+    { "coordinates": [108.239, 16.071] },
+    { "coordinates": [108.251, 16.082] },
+    { "stopId": "linh-ung-pagoda-son-tra", "coordinates": [108.277559, 16.099683] },
+    { "coordinates": [108.273, 16.109] },
+    { "stopId": "son-tra-peninsula", "coordinates": [108.269, 16.118] }
+  ]
+}

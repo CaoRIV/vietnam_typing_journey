@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { normalizeVietnameseAnswer } from "../game/normalize";
 import { daNangPlaces } from "./daNangProvince";
+import { daNangRoute } from "./daNangRoute";
 
 describe("Da Nang tourism place data", () => {
   it("defines five complete and uniquely identified places", () => {
@@ -39,5 +40,36 @@ describe("Da Nang tourism place data", () => {
       daNangPlaces.find((place) => place.id === "museum-of-cham-sculpture")
         ?.acceptedAnswers,
     ).toContain("Bảo tàng Chăm");
+  });
+
+  it("projects a complete SVG and GeoJSON route with readable stop labels", () => {
+    expect(daNangRoute.id).toBe("da-nang-highlights-prototype");
+    expect(daNangRoute.geoPoints).toHaveLength(daNangRoute.points.length);
+    expect(daNangRoute.points.length).toBeGreaterThan(daNangRoute.stops.length);
+    expect(daNangRoute.stops.map((stop) => stop.id)).toEqual([
+      "marble-mountains",
+      "museum-of-cham-sculpture",
+      "dragon-bridge-da-nang",
+      "linh-ung-pagoda-son-tra",
+      "son-tra-peninsula",
+    ]);
+
+    const placeById = new Map(daNangPlaces.map((place) => [place.id, place]));
+    daNangRoute.stops.forEach((stop) => {
+      expect(placeById.get(stop.id)?.name).toBe(stop.name);
+      expect(daNangRoute.geoPoints[stop.pointIndex]).toEqual(stop.coordinates);
+      expect(daNangRoute.points[stop.pointIndex]).toBeDefined();
+      expect(stop.label.x).toBeGreaterThan(0);
+      expect(stop.label.x).toBeLessThan(480);
+      expect(stop.label.y).toBeGreaterThan(0);
+      expect(stop.label.y).toBeLessThan(720);
+    });
+
+    const labelPositions = daNangRoute.stops.map((stop) => stop.label);
+    labelPositions.forEach((label, index) => {
+      labelPositions.slice(index + 1).forEach((otherLabel) => {
+        expect(Math.hypot(label.x - otherLabel.x, label.y - otherLabel.y)).toBeGreaterThan(24);
+      });
+    });
   });
 });
