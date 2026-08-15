@@ -114,9 +114,9 @@ type ProvinceJourney = {
 - Kéo bản đồ sau khi phóng to để xem từng vùng.
 - Desktop hỗ trợ double-click, `Ctrl + con lăn`, các phím `+`, `−`, `0` và phím mũi tên.
 
-## Prototype tỉnh Huế
+## Hành trình tỉnh hiện có
 
-Dữ liệu biên tập của tỉnh thí điểm nằm tại `src/data/hueProvince.ts`. Mỗi địa điểm có:
+Dữ liệu biên tập của Huế và Đà Nẵng nằm tại `src/data/hueProvince.ts` và `src/data/daNangProvince.ts`. Mỗi địa điểm có:
 
 - Tên hiển thị và các đáp án được chấp nhận.
 - Tọa độ WGS84.
@@ -124,13 +124,17 @@ Dữ liệu biên tập của tỉnh thí điểm nằm tại `src/data/hueProvi
 - Ảnh, tác giả, giấy phép và nguồn ảnh.
 - Nguồn kiểm chứng nội dung.
 
-Prototype hiện gồm Đại Nội Huế, Chùa Thiên Mụ, Lăng Khải Định, Lăng Minh Mạng và Đồi Vọng Cảnh. Bốn tọa độ di tích dùng dữ liệu UNESCO; ảnh dùng Wikimedia Commons và giữ thông tin ghi công ngay trong dữ liệu dự án.
+- Huế: Đại Nội Huế, Chùa Thiên Mụ, Lăng Khải Định, Lăng Minh Mạng và Đồi Vọng Cảnh.
+- Đà Nẵng: Ngũ Hành Sơn, Bảo tàng Điêu khắc Chăm, Cầu Rồng, Chùa Linh Ứng Sơn Trà và Bán đảo Sơn Trà.
+
+Hai hành trình dùng chung game engine, hệ thống định tuyến và giao diện. Ảnh dùng Wikimedia Commons và giữ thông tin ghi công ngay trong dữ liệu dự án.
 
 ## Luật chơi hiện tại
 
-- Gõ lần lượt năm điểm tham quan của prototype Huế; chấp nhận có dấu, không dấu, viết hoa, khoảng trắng tùy ý và các tên gọi thay thế đã biên tập.
+- Chọn Huế hoặc Đà Nẵng từ bản đồ 34 tỉnh/thành, sau đó gõ lần lượt năm điểm tham quan của hành trình.
+- Chấp nhận có dấu, không dấu, viết hoa, khoảng trắng tùy ý và các tên gọi thay thế đã biên tập.
 - Đồng hồ bắt đầu ở ký tự đúng đầu tiên. Ký tự sai không làm xe tiến lên.
 - Có thể tạm dừng; thời gian tạm dừng không được tính vào kết quả.
 - Giao diện cập nhật progress, CPM, WPM, accuracy và thời gian từng điểm dừng.
 - Sau mỗi đáp án đúng, giao diện đánh dấu điểm đã ghé và hiển thị mô tả cùng nguồn nội dung của điểm đó.
-- Hoàn thành Đồi Vọng Cảnh sẽ tạo `GameResult` version 1 trong state của game engine.
+- Hoàn thành điểm cuối của hành trình sẽ tạo `GameResult` version 1 trong state của game engine.

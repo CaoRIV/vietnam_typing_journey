@@ -67,7 +67,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe("Hue tourism map prototype", () => {
+describe("province journey prototypes", () => {
   it("navigates from the national selector to Hue and back", () => {
     const { container } = render(<App />);
 
@@ -98,7 +98,7 @@ describe("Hue tourism map prototype", () => {
     ).toBeInTheDocument();
   });
 
-  it("selects every province polygon while keeping unavailable journeys closed", () => {
+  it("opens Da Nang as the second available province journey", () => {
     const { container } = render(<App />);
     const daNang = container.querySelector(
       '[data-province-code="48"]',
@@ -110,13 +110,36 @@ describe("Hue tourism map prototype", () => {
     expect(
       screen.getByRole("heading", { name: "Hành trình Đà Nẵng" }),
     ).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Sắp mở" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /Bắt đầu/ })).toBeEnabled();
     expect(JSON.parse(window.render_game_to_text!())).toMatchObject({
       selectedProvince: {
         code: "48",
         name: "Đà Nẵng",
-        status: "coming-soon",
+        status: "available",
       },
+      availableJourneys: [
+        { slug: "hue", places: 5 },
+        { slug: "da-nang", places: 5 },
+      ],
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /Bắt đầu/ }));
+
+    expect(window.location.pathname).toBe("/hanh-trinh/da-nang");
+    expect(
+      screen.getByRole("heading", { name: "Tỉnh thí điểm: Đà Nẵng" }),
+    ).toBeInTheDocument();
+    expect(container.querySelectorAll("[data-stop-id]")).toHaveLength(5);
+    expect(
+      container.querySelector('[data-stop-id="marble-mountains"]'),
+    ).toHaveTextContent("Ngũ Hành Sơn");
+    expect(JSON.parse(window.render_game_to_text!())).toMatchObject({
+      journey: {
+        id: "da-nang-highlights-prototype",
+        slug: "da-nang",
+        province: "Đà Nẵng",
+      },
+      currentStop: "Ngũ Hành Sơn",
     });
   });
 
