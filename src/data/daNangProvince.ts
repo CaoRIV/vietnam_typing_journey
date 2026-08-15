@@ -1,4 +1,5 @@
-import type { TourismPlace } from "../journey/types";
+import type { ProvinceJourney, TourismPlace } from "../journey/types";
+import { daNangRoute } from "./daNangRoute";
 
 const daNangTourismSource = {
   label: "Cổng thông tin du lịch thành phố Đà Nẵng",
@@ -132,3 +133,15 @@ export const daNangPlaces: readonly TourismPlace[] = [
     ],
   },
 ];
+
+export const daNangProvince: ProvinceJourney = {
+  id: "da-nang-highlights-prototype",
+  slug: "da-nang",
+  name: "Hành trình Đà Nẵng",
+  shortName: "Đà Nẵng",
+  description:
+    "Năm điểm dừng kết nối danh thắng, di sản Chăm, biểu tượng đô thị và cảnh quan bán đảo Sơn Trà.",
+  center: [108.242, 16.065],
+  route: daNangRoute,
+  places: daNangPlaces,
+};
