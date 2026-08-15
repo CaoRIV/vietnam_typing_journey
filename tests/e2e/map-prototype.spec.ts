@@ -3,6 +3,7 @@ import { expect, test } from "@playwright/test";
 const readState = async (page: import("@playwright/test").Page) =>
   page.evaluate(() => JSON.parse(window.render_game_to_text?.() ?? "{}"));
 const HUE_JOURNEY_PATH = "/hanh-trinh/hue";
+const DA_NANG_JOURNEY_PATH = "/hanh-trinh/da-nang";
 
 const waitForMapRenderer = async (page: import("@playwright/test").Page) => {
   await page.waitForFunction(() => {
@@ -21,16 +22,9 @@ test("opens Hue from the national selector and supports browser navigation", asy
     mode: "province-select",
     totalProvinces: 34,
   });
-  expect(selectorState.availableJourneys).toHaveLength(1);
+  expect(selectorState.availableJourneys).toHaveLength(2);
   expect(selectorState.mapProvinces).toHaveLength(34);
   await expect(page.locator(".selector-province-shape")).toHaveCount(34);
-
-  await page.locator('[data-province-hit-code="48"]').click();
-  await expect(page.getByRole("heading", { name: "Hành trình Đà Nẵng" })).toBeVisible();
-  expect((await readState(page)).selectedProvince).toMatchObject({
-    code: "48",
-    status: "coming-soon",
-  });
 
   await page.locator('[data-province-hit-code="46"]').click();
   await page.locator("#open-hue-journey").click();
@@ -44,6 +38,38 @@ test("opens Hue from the national selector and supports browser navigation", asy
   await expect(page.locator("#journey-typing-input")).toBeVisible();
   await page.locator("#back-to-province-map").click();
   await expect(page).toHaveURL(/\/ban-do$/);
+});
+
+test("opens Da Nang from the national selector", async ({ page }) => {
+  await page.goto("/ban-do");
+  await page.locator('[data-province-hit-code="48"]').click();
+
+  await expect(
+    page.getByRole("heading", { name: "Hành trình Đà Nẵng" }),
+  ).toBeVisible();
+  expect((await readState(page)).selectedProvince).toMatchObject({
+    code: "48",
+    status: "available",
+  });
+
+  await page.locator("#open-da-nang-journey").click();
+  await expect(page).toHaveURL(new RegExp(`${DA_NANG_JOURNEY_PATH}$`));
+  await expect(page.locator("#journey-typing-input")).toBeVisible();
+  await expect(page.locator('[data-stop-id="marble-mountains"]')).toContainText(
+    "Ngũ Hành Sơn",
+  );
+
+  const state = await readState(page);
+  expect(state).toMatchObject({
+    mode: "idle",
+    journey: {
+      id: "da-nang-highlights-prototype",
+      slug: "da-nang",
+      province: "Đà Nẵng",
+    },
+    currentStop: "Ngũ Hành Sơn",
+  });
+  expect(state.stops).toHaveLength(5);
 });
 
 test("accepts Vietnamese variants and advances only for correct input", async ({ page }) => {

@@ -188,3 +188,17 @@ Original prompt: làm phần 2: Làm prototype bản đồ. Vẽ bản đồ Vi�
 ## TODO next
 
 - Register `daNangProvince` in `availableJourneys`, add its `journeySlug` to the Đà Nẵng catalog entry, and update selector/navigation tests before exposing the route to users.
+
+## 2026-08-15 - Enable the Da Nang journey
+
+- Registered `daNangProvince` in `availableJourneys` and mapped province code 48 to the `da-nang` journey slug.
+- The national selector now reports two open journeys, marks Đà Nẵng as `available`, and exposes a stable `#open-da-nang-journey` action.
+- Added component coverage for selecting Đà Nẵng, navigating to `/hanh-trinh/da-nang`, rendering five route stops, and exposing the journey/current-stop state through `render_game_to_text`.
+- Added an E2E scenario for the same selector-to-play flow while preserving the existing Hue navigation scenario.
+- Updated README content and current game rules to describe both available five-stop journeys.
+- Verification passed: 62 Vitest tests, TypeScript build mode, ESLint, and production Vite build.
+- Browser visual/E2E execution could not be completed in this environment because launching Chromium outside the sandbox was not approved; the temporary Vite server was stopped cleanly.
+
+## TODO next
+
+- Run the new Da Nang E2E scenario on desktop/mobile when Chromium execution is available, then add a play-through test that completes all five Da Nang stops and verifies persisted completion on the province selector.

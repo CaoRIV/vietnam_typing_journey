@@ -184,8 +184,8 @@ export function VietnamJourneySelector({
               Việt Nam đang mở từng chặng
             </h2>
             <p className="mt-2 max-w-[38ch] text-sm leading-6 text-muted">
-              Chọn trực tiếp một tỉnh trên bản đồ. Huế đã có hành trình; các
-              tỉnh còn lại hiển thị trạng thái chờ nội dung.
+              Chọn trực tiếp một tỉnh trên bản đồ. Huế và Đà Nẵng đã có hành
+              trình; các tỉnh còn lại hiển thị trạng thái chờ nội dung.
             </p>
           </div>
 
@@ -292,8 +292,8 @@ export function VietnamJourneySelector({
             </div>
             <button
               id={
-                selectedJourney?.slug === "hue"
-                  ? "open-hue-journey"
+                selectedJourney
+                  ? `open-${selectedJourney.slug}-journey`
                   : undefined
               }
               type="button"
