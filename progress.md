@@ -169,3 +169,22 @@ Original prompt: làm phần 2: Làm prototype bản đồ. Vẽ bản đồ Vi�
 ## TODO next
 
 - Task 2: create the projected SVG/GeoJSON route and stop labels for the Da Nang journey.
+
+## 2026-08-14 - Da Nang projected route geometry
+
+- Added `src/data/daNangRoute.geo.json` with an 11-waypoint static fallback route through all five Da Nang places.
+- Extended the map geometry generator to project the Da Nang GeoJSON coordinates with the same Mercator projection used by the Vietnam SVG map.
+- Added generated SVG points, GeoJSON points, stop indices, leader positions, and label anchors through `daNangRoute.generated.ts` and `daNangRoute.ts`.
+- Added route-data tests covering stop order, place-content alignment, projected bounds, and minimum label spacing.
+- Inspected a full-map preview and adjusted the Ngũ Hành Sơn callout so all five labels remain separated.
+
+## 2026-08-15 - Da Nang ProvinceJourney assembly
+
+- Exported `daNangProvince` as a complete `ProvinceJourney` with stable id/slug, display metadata, map center, generated route, and the five reviewed place records.
+- Added a model-level test proving `createGameConfig` follows route order even though place content is stored independently.
+- Kept the journey out of `availableJourneys` and the province catalog in this small slice, so Đà Nẵng is not user-visible yet.
+- Verification passed: 62 Vitest tests, TypeScript build mode, ESLint, and production Vite build.
+
+## TODO next
+
+- Register `daNangProvince` in `availableJourneys`, add its `journeySlug` to the Đà Nẵng catalog entry, and update selector/navigation tests before exposing the route to users.

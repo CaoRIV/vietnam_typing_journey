@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import { normalizeVietnameseAnswer } from "../game/normalize";
-import { daNangPlaces } from "./daNangProvince";
+import { createGameConfig, createPlaceIndex } from "../journey/model";
+import { daNangPlaces, daNangProvince } from "./daNangProvince";
 import { daNangRoute } from "./daNangRoute";
 
 describe("Da Nang tourism place data", () => {
@@ -70,6 +71,28 @@ describe("Da Nang tourism place data", () => {
       labelPositions.slice(index + 1).forEach((otherLabel) => {
         expect(Math.hypot(label.x - otherLabel.x, label.y - otherLabel.y)).toBeGreaterThan(24);
       });
+    });
+  });
+
+  it("assembles a reusable province journey in route order", () => {
+    expect(daNangProvince).toMatchObject({
+      id: "da-nang-highlights-prototype",
+      slug: "da-nang",
+      shortName: "Đà Nẵng",
+      route: daNangRoute,
+      places: daNangPlaces,
+    });
+
+    const placeById = createPlaceIndex(daNangProvince);
+    const gameConfig = createGameConfig(daNangProvince);
+
+    expect(gameConfig.journeyId).toBe(daNangProvince.id);
+    expect(gameConfig.stops.map((stop) => stop.id)).toEqual(
+      daNangRoute.stops.map((stop) => stop.id),
+    );
+    gameConfig.stops.forEach((stop) => {
+      expect(placeById.get(stop.id)?.name).toBe(stop.displayName);
+      expect(stop.acceptedAnswers).toContain(stop.displayName);
     });
   });
 });
