@@ -202,3 +202,17 @@ Original prompt: làm phần 2: Làm prototype bản đồ. Vẽ bản đồ Vi�
 ## TODO next
 
 - Run the new Da Nang E2E scenario on desktop/mobile when Chromium execution is available, then add a play-through test that completes all five Da Nang stops and verifies persisted completion on the province selector.
+
+## 2026-08-16 - Da Nang completion and persistence coverage
+
+- Added a component-level full play-through for all five Da Nang stops using reviewed alternative answers: Non Nước, Bảo tàng Chăm, Cầu Rồng, Linh Ứng, and Sơn Trà.
+- Verified completion creates a version 1 `GameResult` with 65/65 correct characters and five stop splits.
+- Verified returning to the national selector marks province code 48 as completed and the completion survives an unmount/reload through `localStorage`.
+- Extended the Da Nang Playwright scenario to cover the same full flow on both configured desktop and mobile projects.
+- Verification passed: 63 Vitest tests, TypeScript build mode, ESLint, production Vite build, and Playwright discovery of both Da Nang viewport scenarios.
+- Chromium runtime execution remains pending because browser launch permission is unavailable in the current environment.
+
+## TODO next
+
+- Run the discovered Da Nang Playwright scenarios when Chromium permission is available and inspect the completed-state screenshots.
+- After visual verification, choose the next product slice: a dedicated result/share screen or content for the third province journey.

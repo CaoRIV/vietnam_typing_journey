@@ -40,7 +40,9 @@ test("opens Hue from the national selector and supports browser navigation", asy
   await expect(page).toHaveURL(/\/ban-do$/);
 });
 
-test("opens Da Nang from the national selector", async ({ page }) => {
+test("opens, completes, and persists Da Nang from the national selector", async ({
+  page,
+}) => {
   await page.goto("/ban-do");
   await page.locator('[data-province-hit-code="48"]').click();
 
@@ -70,6 +72,53 @@ test("opens Da Nang from the national selector", async ({ page }) => {
     currentStop: "Ngũ Hành Sơn",
   });
   expect(state.stops).toHaveLength(5);
+
+  const input = page.locator("#journey-typing-input");
+  const answers = [
+    "non nuoc",
+    "bao tang cham",
+    "cau rong",
+    "linh ung",
+    "son tra",
+  ];
+  for (const [index, answer] of answers.entries()) {
+    await input.fill(answer);
+    if (index < answers.length - 1) {
+      await page.evaluate(() => window.advanceTime?.(500));
+    }
+  }
+
+  await expect(
+    page.getByRole("heading", { name: "Hoàn thành hành trình" }),
+  ).toBeVisible();
+  await expect(page.getByText("Đã khám phá Đà Nẵng")).toBeVisible();
+
+  const completedState = await readState(page);
+  expect(completedState).toMatchObject({
+    mode: "completed",
+    progress: 1,
+    result: {
+      version: 1,
+      journeyId: "da-nang-highlights-prototype",
+      correctInputs: 65,
+      totalCharacters: 65,
+    },
+  });
+  expect(completedState.result.stopSplits).toHaveLength(5);
+
+  await page.locator("#back-to-province-map").click();
+  await expect(page.locator('[data-province-code="48"]')).toHaveAttribute(
+    "data-status",
+    "completed",
+  );
+  await page.reload();
+  await expect(page.locator('[data-province-code="48"]')).toHaveAttribute(
+    "data-status",
+    "completed",
+  );
+  expect((await readState(page)).completedJourneys).toEqual([
+    "da-nang-highlights-prototype",
+  ]);
 });
 
 test("accepts Vietnamese variants and advances only for correct input", async ({ page }) => {
