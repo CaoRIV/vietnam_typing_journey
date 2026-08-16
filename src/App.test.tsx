@@ -180,6 +180,54 @@ describe("province journey prototypes", () => {
     });
   });
 
+  it("completes Da Nang and persists its province status", () => {
+    window.history.replaceState({}, "", "/hanh-trinh/da-nang");
+    const firstRender = render(<App />);
+    const input = screen.getByLabelText("Gõ tên địa danh");
+
+    for (const answer of [
+      "non nuoc",
+      "bao tang cham",
+      "cau rong",
+      "linh ung",
+      "son tra",
+    ]) {
+      fireEvent.change(input, { target: { value: answer } });
+    }
+
+    expect(
+      screen.getByRole("heading", { name: "Hoàn thành hành trình" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Đã khám phá Đà Nẵng")).toBeInTheDocument();
+    expect(JSON.parse(window.render_game_to_text!())).toMatchObject({
+      mode: "completed",
+      progress: 1,
+      result: {
+        version: 1,
+        journeyId: "da-nang-highlights-prototype",
+        correctInputs: 65,
+        totalCharacters: 65,
+      },
+    });
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Trở về bản đồ hành trình" }),
+    );
+    expect(
+      firstRender.container.querySelector('[data-province-code="48"]'),
+    ).toHaveAttribute("data-status", "completed");
+
+    firstRender.unmount();
+    window.history.replaceState({}, "", "/ban-do");
+    const secondRender = render(<App />);
+    expect(
+      secondRender.container.querySelector('[data-province-code="48"]'),
+    ).toHaveAttribute("data-status", "completed");
+    expect(JSON.parse(window.render_game_to_text!())).toMatchObject({
+      completedJourneys: ["da-nang-highlights-prototype"],
+    });
+  });
+
   it("runs a different province journey without changing the engine", () => {
     render(<VietnamJourneyMap journey={demoJourney} />);
 
