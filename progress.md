@@ -216,3 +216,13 @@ Original prompt: làm phần 2: Làm prototype bản đồ. Vẽ bản đồ Vi�
 
 - Run the discovered Da Nang Playwright scenarios when Chromium permission is available and inspect the completed-state screenshots.
 - After visual verification, choose the next product slice: a dedicated result/share screen or content for the third province journey.
+
+## 2026-08-17 - Copy journey result
+
+- Added a small completion-screen action that copies the journey name, WPM, accuracy, duration, and visited-place count to the clipboard.
+- Added inline success/error feedback and reset the feedback when the player starts another run.
+- Verification passed with TypeScript build mode and focused ESLint. Unit tests were intentionally skipped for this small task.
+
+## TODO next
+
+- Run the Da Nang desktop/mobile Playwright scenarios when Chromium execution is stable.

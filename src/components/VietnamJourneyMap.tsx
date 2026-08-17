@@ -174,6 +174,9 @@ function JourneyGameSession({
     "svg" | "mapbox-loading" | "mapbox"
   >(hasMapboxAccessToken ? "mapbox-loading" : "svg");
   const [nextRouteStep, setNextRouteStep] = useState<RouteStep | null>(null);
+  const [copyResultStatus, setCopyResultStatus] = useState<
+    "idle" | "copied" | "error"
+  >("idle");
 
   const mapStageRef = useRef<HTMLElement>(null);
   const mapSvgRef = useRef<SVGSVGElement>(null);
@@ -264,6 +267,28 @@ function JourneyGameSession({
       : gameState.currentStopIndex > 0
         ? gameState.stops[gameState.currentStopIndex - 1]?.id
         : null;
+
+  const handleCopyResult = useCallback(async () => {
+    if (!gameState.result) return;
+
+    const resultText = [
+      `Tôi đã hoàn thành ${journey.name}!`,
+      `${metrics.wpm} WPM · Chính xác ${metrics.accuracy}% · ${formatDuration(gameState.result.durationMs)}`,
+      `Đã khám phá ${journey.places.length} địa điểm tại ${journey.shortName}.`,
+    ].join("\n");
+
+    try {
+      await navigator.clipboard.writeText(resultText);
+      setCopyResultStatus("copied");
+    } catch {
+      setCopyResultStatus("error");
+    }
+  }, [gameState.result, journey, metrics.accuracy, metrics.wpm]);
+
+  const resetJourney = useCallback(() => {
+    setCopyResultStatus("idle");
+    dispatch({ type: "RESET" });
+  }, []);
 
   useEffect(() => {
     gameStateRef.current = gameState;
@@ -549,7 +574,7 @@ function JourneyGameSession({
         completedAt: new Date().toISOString(),
       });
     };
-    window.resetJourneyGame = () => dispatch({ type: "RESET" });
+    window.resetJourneyGame = resetJourney;
 
     return () => {
       delete window.render_game_to_text;
@@ -564,6 +589,7 @@ function JourneyGameSession({
     journey,
     mapRenderer,
     nextRouteStep,
+    resetJourney,
     resetMapView,
     route,
     setMapZoom,
@@ -773,7 +799,21 @@ function JourneyGameSession({
 
           <section className="mt-6" aria-labelledby="typing-heading">
             {gameState.status === "completed" ? (
-              <div className="completion-panel" role="status"><p className="text-sm font-bold text-accent">Đã khám phá {journey.shortName}</p><h3 id="typing-heading" className="mt-2 text-2xl font-extrabold tracking-[-0.03em] text-foreground">Hoàn thành hành trình</h3><p className="mt-2 text-sm leading-6 text-muted">{gameState.result?.correctInputs} ký tự đúng, {gameState.result?.incorrectInputs} lần gõ sai trong {formatDuration(gameState.result?.durationMs ?? 0)}.</p></div>
+              <div className="completion-panel" role="status">
+                <p className="text-sm font-bold text-accent">Đã khám phá {journey.shortName}</p>
+                <h3 id="typing-heading" className="mt-2 text-2xl font-extrabold tracking-[-0.03em] text-foreground">Hoàn thành hành trình</h3>
+                <p className="mt-2 text-sm leading-6 text-muted">{gameState.result?.correctInputs} ký tự đúng, {gameState.result?.incorrectInputs} lần gõ sai trong {formatDuration(gameState.result?.durationMs ?? 0)}.</p>
+                <button id="journey-copy-result" type="button" className="game-secondary-button mt-4 w-full" onClick={handleCopyResult}>
+                  {copyResultStatus === "copied" ? "Đã sao chép" : "Sao chép kết quả"}
+                </button>
+                <p className="mt-2 min-h-5 text-xs text-muted" aria-live="polite">
+                  {copyResultStatus === "copied"
+                    ? "Kết quả đã được lưu vào clipboard."
+                    : copyResultStatus === "error"
+                      ? "Không thể sao chép trên trình duyệt này."
+                      : ""}
+                </p>
+              </div>
             ) : (
               <>
                 <p className="text-xs font-bold uppercase tracking-[0.12em] text-muted">Điểm đến hiện tại</p>
@@ -788,8 +828,8 @@ function JourneyGameSession({
             <p id="typing-feedback" className="typing-feedback mt-2" data-feedback={gameState.feedback} aria-live="polite">{feedbackText}</p>
 
             <div className="mt-4 grid grid-cols-[1fr_auto] gap-3">
-              {gameState.status === "completed" ? <button id="journey-restart" type="button" className="game-primary-button" onClick={() => dispatch({ type: "RESET" })}>Chơi lại</button> : <button id="journey-pause-toggle" type="button" className="game-primary-button" disabled={gameState.status === "ready"} onClick={() => dispatch({ type: gameState.status === "paused" ? "RESUME" : "PAUSE", now: performance.now() })}>{gameState.status === "paused" ? "Tiếp tục" : "Tạm dừng"}</button>}
-              <button id="journey-reset" type="button" className="game-secondary-button" onClick={() => dispatch({ type: "RESET" })}>Đặt lại</button>
+              {gameState.status === "completed" ? <button id="journey-restart" type="button" className="game-primary-button" onClick={resetJourney}>Chơi lại</button> : <button id="journey-pause-toggle" type="button" className="game-primary-button" disabled={gameState.status === "ready"} onClick={() => dispatch({ type: gameState.status === "paused" ? "RESUME" : "PAUSE", now: performance.now() })}>{gameState.status === "paused" ? "Tiếp tục" : "Tạm dừng"}</button>}
+              <button id="journey-reset" type="button" className="game-secondary-button" onClick={resetJourney}>Đặt lại</button>
             </div>
           </section>
 
